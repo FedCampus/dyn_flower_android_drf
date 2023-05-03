@@ -1,5 +1,6 @@
 apply plugin: 'com.google.protobuf'
 apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
     compileSdkVersion 33
@@ -68,6 +69,8 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.0'
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.core:core-ktx:1.10.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test:runner:1.5.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
@@ -88,6 +91,9 @@ dependencies {
 
     implementation 'com.google.android.material:material:1.7.0'
 
+    // HTTP requests.
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
 }
 
 //def modelUrl = 'https://www.dropbox.com/s/tubgpepk2q6xiny/models.zip?dl=1'
