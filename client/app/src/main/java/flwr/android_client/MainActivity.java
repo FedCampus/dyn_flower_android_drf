@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import flwr.android_client.FlowerServiceGrpc.FlowerServiceStub;
+import flwr.android_client.train.TFLiteModelData;
 import flwr.android_client.train.TrainKt;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
@@ -41,11 +42,12 @@ import io.grpc.stub.StreamObserver;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "Flower";
     public FlowerClient fc;
+    public TFLiteModelData model = null;
+    public Button trainButton;
     private EditText ip;
     private EditText port;
     private Button loadDataButton;
     private Button connectButton;
-    private Button trainButton;
     private TextView resultText;
     private EditText device_id;
     private ManagedChannel channel;
@@ -88,16 +90,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        resultText = (TextView) findViewById(R.id.grpc_response_text);
+        resultText = findViewById(R.id.grpc_response_text);
         resultText.setMovementMethod(new ScrollingMovementMethod());
-        device_id = (EditText) findViewById(R.id.device_id_edit_text);
-        ip = (EditText) findViewById(R.id.serverIP);
-        port = (EditText) findViewById(R.id.serverPort);
-        loadDataButton = (Button) findViewById(R.id.load_data);
-        connectButton = (Button) findViewById(R.id.connect);
-        trainButton = (Button) findViewById(R.id.trainFederated);
-
-        fc = new FlowerClient(this);
+        device_id = findViewById(R.id.device_id_edit_text);
+        ip = findViewById(R.id.serverIP);
+        port = findViewById(R.id.serverPort);
+        loadDataButton = findViewById(R.id.load_data);
+        connectButton = findViewById(R.id.connect);
+        trainButton = findViewById(R.id.trainFederated);
     }
 
     public void setResultText(String text) {
@@ -106,6 +106,7 @@ public class MainActivity extends AppCompatActivity {
         resultText.append("\n" + time + "   " + text);
     }
 
+    // TODO: LoadData after `this.fc` is initialized.
     public void loadData(View view) {
         if (TextUtils.isEmpty(device_id.getText().toString())) {
             Toast.makeText(this, "Please enter a client partition ID between 1 and 10 (inclusive)", Toast.LENGTH_LONG).show();
@@ -154,9 +155,7 @@ public class MainActivity extends AppCompatActivity {
             TrainKt.getAdvertisedModel(this, host, port);
 //            channel = ManagedChannelBuilder.forAddress(host, port).maxInboundMessageSize(10 * 1024 * 1024).usePlaintext().build();
             hideKeyboard(this);
-            trainButton.setEnabled(true);
             connectButton.setEnabled(false);
-            setResultText("Channel object created. Ready to train!");
         }
     }
 
@@ -225,6 +224,7 @@ public class MainActivity extends AppCompatActivity {
 
         private void handleMessage(ServerMessage message, MainActivity activity) {
 
+            int nLayers = activity.model.getN_layers();
             try {
                 ByteBuffer[] weights;
                 ClientMessage c = null;
@@ -240,15 +240,15 @@ public class MainActivity extends AppCompatActivity {
                     activity.setResultText("Handling Fit request from the server.");
 
                     List<ByteString> layers = message.getFitIns().getParameters().getTensorsList();
+                    assert layers.size() == nLayers;
 
                     Scalar epoch_config = message.getFitIns().getConfigMap().getOrDefault("local_epochs", Scalar.newBuilder().setSint64(1).build());
 
                     assert epoch_config != null;
                     int local_epochs = (int) epoch_config.getSint64();
 
-                    // Our model has 10 layers
-                    ByteBuffer[] newWeights = new ByteBuffer[10];
-                    for (int i = 0; i < 10; i++) {
+                    ByteBuffer[] newWeights = new ByteBuffer[nLayers];
+                    for (int i = 0; i < nLayers; i++) {
                         newWeights[i] = ByteBuffer.wrap(layers.get(i).toByteArray());
                     }
 
@@ -259,10 +259,10 @@ public class MainActivity extends AppCompatActivity {
                     activity.setResultText("Handling Evaluate request from the server");
 
                     List<ByteString> layers = message.getEvaluateIns().getParameters().getTensorsList();
+                    assert layers.size() == nLayers;
 
-                    // Our model has 10 layers
-                    ByteBuffer[] newWeights = new ByteBuffer[10];
-                    for (int i = 0; i < 10; i++) {
+                    ByteBuffer[] newWeights = new ByteBuffer[nLayers];
+                    for (int i = 0; i < nLayers; i++) {
                         newWeights[i] = ByteBuffer.wrap(layers.get(i).toByteArray());
                     }
                     Pair<Pair<Float, Float>, Integer> inference = activity.fc.evaluate(newWeights);
