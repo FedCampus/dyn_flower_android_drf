@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import flwr.android_client.FlowerServiceGrpc.FlowerServiceStub;
+import flwr.android_client.train.TFLiteModelData;
 import flwr.android_client.train.TrainKt;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
@@ -40,6 +41,7 @@ import io.grpc.stub.StreamObserver;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "Flower";
+    public TFLiteModelData model = null;
     public FlowerClient fc;
     private EditText ip;
     private EditText port;
@@ -151,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Please enter the correct IP and port of the FL server", Toast.LENGTH_LONG).show();
         } else {
             int port = TextUtils.isEmpty(portStr) ? 0 : Integer.parseInt(portStr);
-            TrainKt.getAdvertisedModel("http://" + host + ":" + port);
+            TrainKt.getAdvertisedModel(this, host, port);
 //            channel = ManagedChannelBuilder.forAddress(host, port).maxInboundMessageSize(10 * 1024 * 1024).usePlaintext().build();
             hideKeyboard(this);
             trainButton.setEnabled(true);
@@ -196,31 +198,29 @@ public class MainActivity extends AppCompatActivity {
             join(asyncStub, activity);
         }
 
-        private void join(FlowerServiceStub asyncStub, MainActivity activity)
-                throws RuntimeException {
+        private void join(FlowerServiceStub asyncStub, MainActivity activity) throws RuntimeException {
 
             final CountDownLatch finishLatch = new CountDownLatch(1);
-            requestObserver = asyncStub.join(
-                    new StreamObserver<ServerMessage>() {
-                        @Override
-                        public void onNext(ServerMessage msg) {
-                            handleMessage(msg, activity);
-                        }
+            requestObserver = asyncStub.join(new StreamObserver<ServerMessage>() {
+                @Override
+                public void onNext(ServerMessage msg) {
+                    handleMessage(msg, activity);
+                }
 
-                        @Override
-                        public void onError(Throwable t) {
-                            t.printStackTrace();
-                            failed = t;
-                            finishLatch.countDown();
-                            Log.e(TAG, t.getMessage());
-                        }
+                @Override
+                public void onError(Throwable t) {
+                    t.printStackTrace();
+                    failed = t;
+                    finishLatch.countDown();
+                    Log.e(TAG, t.getMessage());
+                }
 
-                        @Override
-                        public void onCompleted() {
-                            finishLatch.countDown();
-                            Log.e(TAG, "Done");
-                        }
-                    });
+                @Override
+                public void onCompleted() {
+                    finishLatch.countDown();
+                    Log.e(TAG, "Done");
+                }
+            });
         }
 
         private void handleMessage(ServerMessage message, MainActivity activity) {

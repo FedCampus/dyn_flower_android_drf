@@ -1,6 +1,7 @@
 package flwr.android_client.train
 
 import android.util.Log
+import flwr.android_client.MainActivity
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -32,14 +33,17 @@ data class TFLiteModelData(
 )
 
 @OptIn(DelicateCoroutinesApi::class)
-fun getAdvertisedModel(url: String) {
+fun getAdvertisedModel(activity: MainActivity, host: String, port: Int) {
+    // TODO: HTTPS
+    val url = "http://$host:$port"
     Log.i("URL", url)
     GlobalScope.launch {
         try {
-            val model = Train(url).getAdvertisedModel()
-            Log.d("Model", "$model")
+            activity.model = Train(url).getAdvertisedModel()
         } catch (err: Exception) {
             Log.e("get advertised model", "request failed", err)
+            return@launch
         }
+        Log.d("Model", "${activity.model}")
     }
 }
