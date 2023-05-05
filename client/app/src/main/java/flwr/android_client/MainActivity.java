@@ -151,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Please enter the correct IP and port of the FL server", Toast.LENGTH_LONG).show();
         } else {
             int port = TextUtils.isEmpty(portStr) ? 0 : Integer.parseInt(portStr);
-            TrainKt.getAdvertisedModel("http://" + host + ":" + port);
+            TrainKt.getAdvertisedModel(this, host, port);
 //            channel = ManagedChannelBuilder.forAddress(host, port).maxInboundMessageSize(10 * 1024 * 1024).usePlaintext().build();
             hideKeyboard(this);
             trainButton.setEnabled(true);

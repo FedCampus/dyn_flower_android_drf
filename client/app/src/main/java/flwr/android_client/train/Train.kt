@@ -1,5 +1,8 @@
 package flwr.android_client.train
 
+import android.app.DownloadManager
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -31,15 +34,30 @@ data class TFLiteModelData(
     val tflite_files: List<String>
 )
 
+/**
+ * Download advertised model information.
+Download TFLite files to `"models/$path"`.
+ */
 @OptIn(DelicateCoroutinesApi::class)
-fun getAdvertisedModel(url: String) {
+fun getAdvertisedModel(context: Context, host: String, port: Int) {
+    // TODO: HTTPS
+    val url = "http://$host:$port"
     Log.i("URL", url)
     GlobalScope.launch {
+        lateinit var model: TFLiteModelData
         try {
-            val model = Train(url).getAdvertisedModel()
-            Log.d("Model", "$model")
+            model = Train(url).getAdvertisedModel()
         } catch (err: Exception) {
             Log.e("get advertised model", "request failed", err)
+        }
+        Log.d("Model", "$model")
+        val downloadManager =
+            context.getSystemService(DownloadManager::class.java)
+        for (path in model.tflite_files) {
+            Log.i("Download TFLite model", path)
+            val request = DownloadManager.Request(Uri.parse("$url/$path"))
+                .setDestinationInExternalFilesDir(context, "models/", path)
+            downloadManager.enqueue(request)
         }
     }
 }
