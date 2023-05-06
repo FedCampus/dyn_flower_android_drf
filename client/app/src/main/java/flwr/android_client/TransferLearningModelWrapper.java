@@ -2,23 +2,21 @@ package flwr.android_client;
 
 import android.content.Context;
 import android.os.ConditionVariable;
-import android.os.Environment;
 import android.util.Pair;
 
-import java.io.Closeable;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.channels.GatheringByteChannel;
-import java.util.Arrays;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import org.tensorflow.lite.examples.transfer.api.AssetModelLoader;
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel;
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel.LossConsumer;
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel.Prediction;
+
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 /**
  * App-layer wrapper for {@link TransferLearningModel}.
@@ -38,28 +36,27 @@ public class TransferLearningModelWrapper implements Closeable {
 
     private final ConditionVariable shouldTrain = new ConditionVariable();
     private volatile LossConsumer lossConsumer;
-    private Context context;
-    TransferLearningModelWrapper(Context context) {
+
+    TransferLearningModelWrapper(Context context, String directoryName) {
         model =
                 new TransferLearningModel(
-                        new AssetModelLoader(context, "model"),
+                        new AssetModelLoader(context, directoryName),
                         Arrays.asList("cat", "dog", "truck", "bird",
                                 "airplane", "ship", "frog", "horse", "deer",
                                 "automobile"));
-        this.context = context;
     }
 
 
-    public void train(int epochs){
+    public void train(int epochs) {
         new Thread(() -> {
-                shouldTrain.block();
-                try {
-                    model.train(epochs, lossConsumer).get();
-                } catch (ExecutionException e) {
-                    throw new RuntimeException("Exception occurred during model training", e.getCause());
-                } catch (InterruptedException e) {
-                    // no-op
-                }
+            shouldTrain.block();
+            try {
+                model.train(epochs, lossConsumer).get();
+            } catch (ExecutionException e) {
+                throw new RuntimeException("Exception occurred during model training", e.getCause());
+            } catch (InterruptedException e) {
+                // no-op
+            }
         }).start();
     }
 
@@ -68,7 +65,7 @@ public class TransferLearningModelWrapper implements Closeable {
         return model.addSample(image, className, isTraining);
     }
 
-    public Pair<Float, Float> calculateTestStatistics(){
+    public Pair<Float, Float> calculateTestStatistics() {
         return model.getTestStatistics();
     }
 
@@ -92,17 +89,13 @@ public class TransferLearningModelWrapper implements Closeable {
         shouldTrain.open();
     }
 
-    public FileChannel createChannelInstance(File file, boolean isOutput)
-    {
+    public FileChannel createChannelInstance(File file, boolean isOutput) {
         FileChannel fc = null;
-        try
-        {
+        try {
             if (isOutput) {
                 fc = new FileOutputStream(file).getChannel();
-            } else {
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return fc;
@@ -113,9 +106,11 @@ public class TransferLearningModelWrapper implements Closeable {
         return model.getSize_Training();
     }
 
-    public int getSize_Testing() { return model.getSize_Testing(); }
+    public int getSize_Testing() {
+        return model.getSize_Testing();
+    }
 
-    public ByteBuffer[] getParameters()  {
+    public ByteBuffer[] getParameters() {
         return model.getParameters();
     }
 
@@ -130,7 +125,9 @@ public class TransferLearningModelWrapper implements Closeable {
         shouldTrain.close();
     }
 
-    /** Frees all model resources and shuts down all background threads. */
+    /**
+     * Frees all model resources and shuts down all background threads.
+     */
     public void close() {
         model.close();
     }

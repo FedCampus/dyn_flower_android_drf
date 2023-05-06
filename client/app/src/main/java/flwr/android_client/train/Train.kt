@@ -2,6 +2,7 @@ package flwr.android_client.train
 
 import android.content.Context
 import android.util.Log
+import flwr.android_client.MainActivity
 import kotlinx.coroutines.*
 import okhttp3.ResponseBody
 import retrofit2.Retrofit
@@ -12,8 +13,8 @@ import retrofit2.http.Streaming
 import retrofit2.http.Url
 import java.io.File
 
-class Train constructor(val url: String) {
-    val retrofit = Retrofit.Builder()
+class Train constructor(url: String) {
+    private val retrofit = Retrofit.Builder()
         // https://developer.android.com/studio/run/emulator-networking#networkaddresses
         .baseUrl(url)
         .addConverterFactory(GsonConverterFactory.create()).build()
@@ -58,7 +59,7 @@ data class TFLiteModelData(
 Download TFLite files to `"models/$path"`.
  */
 @OptIn(DelicateCoroutinesApi::class)
-fun getAdvertisedModel(context: Context, host: String, port: Int) {
+fun getAdvertisedModel(activity: MainActivity, host: String, port: Int) {
     // TODO: HTTPS
     val url = "http://$host:$port"
     Log.i("URL", url)
@@ -77,11 +78,12 @@ fun getAdvertisedModel(context: Context, host: String, port: Int) {
                 val parentDir = "models/${model.name}/"
                 val fileName = fileUrl.split("/").last()
                 Log.i("Download TFLite model", "$fileUrl -> $parentDir$fileName")
-                train.downloadFile(context, fileUrl, parentDir, fileName)
+                train.downloadFile(activity, fileUrl, parentDir, fileName)
             }
             downloadTasks.add(task)
         }
         downloadTasks.awaitAll()
         Log.i("Downloaded TFLite model", "at models/${model.name}/")
+        activity.model = model
     }
 }

@@ -3,7 +3,6 @@ package flwr.android_client;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.os.ConditionVariable;
 import android.util.Log;
 import android.util.Pair;
@@ -18,17 +17,43 @@ import java.util.concurrent.ExecutionException;
 
 public class FlowerClient {
 
-    private TransferLearningModelWrapper tlModel;
     private static final int LOWER_BYTE_MASK = 0xFF;
-    private MutableLiveData<Float> lastLoss = new MutableLiveData<>();
-    private Context context;
+    private static final String TAG = "Flower";
     private final ConditionVariable isTraining = new ConditionVariable();
-    private static String TAG = "Flower";
+    private final TransferLearningModelWrapper tlModel;
+    private final MutableLiveData<Float> lastLoss = new MutableLiveData<>();
+    private final Context context;
     private int local_epochs = 1;
 
-    public FlowerClient(Context context) {
-        this.tlModel = new TransferLearningModelWrapper(context);
+    public FlowerClient(Context context, String directoryName) {
+        this.tlModel = new TransferLearningModelWrapper(context, directoryName);
         this.context = context;
+    }
+
+    /**
+     * Normalizes a camera image to [0; 1], cropping it
+     * to size expected by the model and adjusting for camera rotation.
+     */
+    private static float[] prepareImage(Bitmap bitmap) {
+        int modelImageSize = TransferLearningModelWrapper.IMAGE_SIZE;
+
+        float[] normalizedRgb = new float[modelImageSize * modelImageSize * 3];
+        int nextIdx = 0;
+        for (int y = 0; y < modelImageSize; y++) {
+            for (int x = 0; x < modelImageSize; x++) {
+                int rgb = bitmap.getPixel(x, y);
+
+                float r = ((rgb >> 16) & LOWER_BYTE_MASK) * (1 / 255.0f);
+                float g = ((rgb >> 8) & LOWER_BYTE_MASK) * (1 / 255.0f);
+                float b = (rgb & LOWER_BYTE_MASK) * (1 / 255.0f);
+
+                normalizedRgb[nextIdx++] = r;
+                normalizedRgb[nextIdx++] = g;
+                normalizedRgb[nextIdx++] = b;
+            }
+        }
+
+        return normalizedRgb;
     }
 
     public ByteBuffer[] getWeights() {
@@ -41,8 +66,8 @@ public class FlowerClient {
         tlModel.updateParameters(weights);
         isTraining.close();
         tlModel.train(this.local_epochs);
-        tlModel.enableTraining((epoch, loss) -> setLastLoss(epoch, loss));
-        Log.e(TAG ,  "Training enabled. Local Epochs = " + this.local_epochs);
+        tlModel.enableTraining(this::setLastLoss);
+        Log.e(TAG, "Training enabled. Local Epochs = " + this.local_epochs);
         isTraining.block();
         return Pair.create(getWeights(), tlModel.getSize_Training());
     }
@@ -75,7 +100,7 @@ public class FlowerClient {
             reader.close();
 
             i = 0;
-            reader = new BufferedReader(new InputStreamReader(this.context.getAssets().open("data/partition_" +  (device_id - 1)  + "_test.txt")));
+            reader = new BufferedReader(new InputStreamReader(this.context.getAssets().open("data/partition_" + (device_id - 1) + "_test.txt")));
             while ((line = reader.readLine()) != null) {
                 i++;
                 Log.e(TAG, i + "th test image loaded");
@@ -91,7 +116,7 @@ public class FlowerClient {
     private void addSample(String photoPath, Boolean isTraining) throws IOException {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-        Bitmap bitmap =  BitmapFactory.decodeStream(this.context.getAssets().open(photoPath), null, options);
+        Bitmap bitmap = BitmapFactory.decodeStream(this.context.getAssets().open(photoPath), null, options);
         String sampleClass = get_class(photoPath);
 
         // get rgb equivalent and class
@@ -108,33 +133,6 @@ public class FlowerClient {
     }
 
     public String get_class(String path) {
-        String label = path.split("/")[2];
-        return label;
-    }
-
-    /**
-     * Normalizes a camera image to [0; 1], cropping it
-     * to size expected by the model and adjusting for camera rotation.
-     */
-    private static float[] prepareImage(Bitmap bitmap)  {
-        int modelImageSize = TransferLearningModelWrapper.IMAGE_SIZE;
-
-        float[] normalizedRgb = new float[modelImageSize * modelImageSize * 3];
-        int nextIdx = 0;
-        for (int y = 0; y < modelImageSize; y++) {
-            for (int x = 0; x < modelImageSize; x++) {
-                int rgb = bitmap.getPixel(x, y);
-
-                float r = ((rgb >> 16) & LOWER_BYTE_MASK) * (1 / 255.0f);
-                float g = ((rgb >> 8) & LOWER_BYTE_MASK) * (1 / 255.0f);
-                float b = (rgb & LOWER_BYTE_MASK) * (1 / 255.0f);
-
-                normalizedRgb[nextIdx++] = r;
-                normalizedRgb[nextIdx++] = g;
-                normalizedRgb[nextIdx++] = b;
-            }
-        }
-
-        return normalizedRgb;
+        return path.split("/")[2];
     }
 }

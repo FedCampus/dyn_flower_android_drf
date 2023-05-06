@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import flwr.android_client.FlowerServiceGrpc.FlowerServiceStub;
+import flwr.android_client.train.TFLiteModelData;
 import flwr.android_client.train.TrainKt;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
@@ -40,6 +41,7 @@ import io.grpc.stub.StreamObserver;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "Flower";
+    public TFLiteModelData model;
     public FlowerClient fc;
     private EditText ip;
     private EditText port;
@@ -88,16 +90,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        resultText = (TextView) findViewById(R.id.grpc_response_text);
+        resultText = findViewById(R.id.grpc_response_text);
         resultText.setMovementMethod(new ScrollingMovementMethod());
-        device_id = (EditText) findViewById(R.id.device_id_edit_text);
-        ip = (EditText) findViewById(R.id.serverIP);
-        port = (EditText) findViewById(R.id.serverPort);
-        loadDataButton = (Button) findViewById(R.id.load_data);
-        connectButton = (Button) findViewById(R.id.connect);
-        trainButton = (Button) findViewById(R.id.trainFederated);
+        device_id = findViewById(R.id.device_id_edit_text);
+        ip = findViewById(R.id.serverIP);
+        port = findViewById(R.id.serverPort);
+        loadDataButton = findViewById(R.id.load_data);
+        connectButton = findViewById(R.id.connect);
+        trainButton = findViewById(R.id.trainFederated);
 
-        fc = new FlowerClient(this);
+        fc = new FlowerClient(this, "model");
     }
 
     public void setResultText(String text) {
