@@ -1,6 +1,5 @@
 package flwr.android_client.train
 
-import android.content.Context
 import android.util.Log
 import flwr.android_client.MainActivity
 import kotlinx.coroutines.*
@@ -35,10 +34,9 @@ class Train constructor(url: String) {
         suspend fun download(@Url url: String): ResponseBody
     }
 
-    suspend fun downloadFile(context: Context, url: String, parentDir: String, fileName: String) {
-        val parent = context.getExternalFilesDir(parentDir)!!
-        parent.mkdirs()
-        val file = File(parent, fileName)
+    suspend fun downloadFile(url: String, parentDir: File, fileName: String) {
+        parentDir.mkdirs()
+        val file = File(parentDir, fileName)
         val download = retrofit.create<DownloadFile>()
         download.download(url).byteStream().use { inputStream ->
             file.outputStream().use { outputStream ->
@@ -73,17 +71,19 @@ fun getAdvertisedModel(activity: MainActivity, host: String, port: Int) {
         }
         Log.d("Model", "$model")
         val downloadTasks = mutableListOf<Deferred<Unit>>()
+        val modelPath = "models/${model.name}/"
+        val modelDir = activity.getExternalFilesDir(modelPath)!!
         for (fileUrl in model.tflite_files) {
             val task = GlobalScope.async {
-                val parentDir = "models/${model.name}/"
                 val fileName = fileUrl.split("/").last()
-                Log.i("Download TFLite model", "$fileUrl -> $parentDir$fileName")
-                train.downloadFile(activity, fileUrl, parentDir, fileName)
+                Log.i("Download TFLite model", "$fileUrl -> $modelPath$fileName")
+                train.downloadFile(fileUrl, modelDir, fileName)
             }
             downloadTasks.add(task)
         }
         downloadTasks.awaitAll()
         Log.i("Downloaded TFLite model", "at models/${model.name}/")
         activity.model = model
+        activity.connectGrpc(modelDir)
     }
 }

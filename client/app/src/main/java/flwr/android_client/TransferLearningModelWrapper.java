@@ -1,10 +1,9 @@
 package flwr.android_client;
 
-import android.content.Context;
 import android.os.ConditionVariable;
 import android.util.Pair;
 
-import org.tensorflow.lite.examples.transfer.api.AssetModelLoader;
+import org.tensorflow.lite.examples.transfer.api.ModelLoader;
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel;
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel.LossConsumer;
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel.Prediction;
@@ -37,13 +36,10 @@ public class TransferLearningModelWrapper implements Closeable {
     private final ConditionVariable shouldTrain = new ConditionVariable();
     private volatile LossConsumer lossConsumer;
 
-    TransferLearningModelWrapper(Context context, String directoryName) {
-        model =
-                new TransferLearningModel(
-                        new AssetModelLoader(context, directoryName),
-                        Arrays.asList("cat", "dog", "truck", "bird",
-                                "airplane", "ship", "frog", "horse", "deer",
-                                "automobile"));
+    TransferLearningModelWrapper(ModelLoader modelLoader) {
+        model = new TransferLearningModel(modelLoader, Arrays.asList(
+                "cat", "dog", "truck", "bird", "airplane", "ship", "frog", "horse", "deer", "automobile"
+        ));
     }
 
 

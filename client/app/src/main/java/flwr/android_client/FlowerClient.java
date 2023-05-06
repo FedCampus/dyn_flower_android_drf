@@ -9,7 +9,11 @@ import android.util.Pair;
 
 import androidx.lifecycle.MutableLiveData;
 
+import org.tensorflow.lite.examples.transfer.api.ExternalModelLoader;
+import org.tensorflow.lite.examples.transfer.api.ModelLoader;
+
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
@@ -25,8 +29,9 @@ public class FlowerClient {
     private final Context context;
     private int local_epochs = 1;
 
-    public FlowerClient(Context context, String directoryName) {
-        this.tlModel = new TransferLearningModelWrapper(context, directoryName);
+    public FlowerClient(Context context, File modelDir) {
+        ModelLoader modelLoader = new ExternalModelLoader(modelDir);
+        this.tlModel = new TransferLearningModelWrapper(modelLoader);
         this.context = context;
     }
 

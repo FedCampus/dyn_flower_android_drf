@@ -21,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.protobuf.ByteString;
 
+import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
@@ -98,8 +99,6 @@ public class MainActivity extends AppCompatActivity {
         loadDataButton = findViewById(R.id.load_data);
         connectButton = findViewById(R.id.connect);
         trainButton = findViewById(R.id.trainFederated);
-
-        fc = new FlowerClient(this, "model");
     }
 
     public void setResultText(String text) {
@@ -127,9 +126,8 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     try {
-                        // Unsetting to save time testing.
-//                        fc.loadData(Integer.parseInt(device_id.getText().toString()));
-                        result = "Training dataset is loaded in memory.";
+                        fc.loadData(Integer.parseInt(device_id.getText().toString()));
+                        result = "Training dataset is loaded in memory. Ready to train!";
                     } catch (Exception e) {
                         StringWriter sw = new StringWriter();
                         PrintWriter pw = new PrintWriter(sw);
@@ -139,7 +137,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     handler.post(() -> {
                         setResultText(result);
-                        connectButton.setEnabled(true);
+                        trainButton.setEnabled(true);
                     });
                 }
             });
@@ -154,12 +152,19 @@ public class MainActivity extends AppCompatActivity {
         } else {
             int port = TextUtils.isEmpty(portStr) ? 0 : Integer.parseInt(portStr);
             TrainKt.getAdvertisedModel(this, host, port);
-//            channel = ManagedChannelBuilder.forAddress(host, port).maxInboundMessageSize(10 * 1024 * 1024).usePlaintext().build();
             hideKeyboard(this);
-            trainButton.setEnabled(true);
             connectButton.setEnabled(false);
-            setResultText("Channel object created. Ready to train!");
+            setResultText("Creating channel object.");
         }
+    }
+
+    public void connectGrpc(File modelDir) {
+        fc = new FlowerClient(this, modelDir);
+//            channel = ManagedChannelBuilder.forAddress(host, port).maxInboundMessageSize(10 * 1024 * 1024).usePlaintext().build();
+        runOnUiThread(() -> {
+            loadDataButton.setEnabled(true);
+            setResultText("Channel object created.");
+        });
     }
 
     public void runGrpc(View view) {
