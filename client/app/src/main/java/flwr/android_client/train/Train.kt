@@ -1,15 +1,16 @@
 package flwr.android_client.train
 
-import android.app.DownloadManager
 import android.content.Context
-import android.net.Uri
 import android.util.Log
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import okhttp3.ResponseBody
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.create
 import retrofit2.http.GET
+import retrofit2.http.Streaming
+import retrofit2.http.Url
+import java.io.File
 
 class Train constructor(val url: String) {
     val retrofit = Retrofit.Builder()
@@ -23,8 +24,26 @@ class Train constructor(val url: String) {
     }
 
     suspend fun getAdvertisedModel(): TFLiteModelData {
-        val getAdvertised = retrofit.create(GetAdvertised::class.java)
+        val getAdvertised = retrofit.create<GetAdvertised>()
         return getAdvertised.getAdvertised()
+    }
+
+    interface DownloadFile {
+        @GET
+        @Streaming
+        suspend fun download(@Url url: String): ResponseBody
+    }
+
+    suspend fun downloadFile(context: Context, url: String, parentDir: String, fileName: String) {
+        val parent = context.getExternalFilesDir(parentDir)!!
+        parent.mkdirs()
+        val file = File(parent, fileName)
+        val download = retrofit.create<DownloadFile>()
+        download.download(url).byteStream().use { inputStream ->
+            file.outputStream().use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+        }
     }
 }
 
@@ -44,20 +63,25 @@ fun getAdvertisedModel(context: Context, host: String, port: Int) {
     val url = "http://$host:$port"
     Log.i("URL", url)
     GlobalScope.launch {
+        val train = Train(url)
         lateinit var model: TFLiteModelData
         try {
-            model = Train(url).getAdvertisedModel()
+            model = train.getAdvertisedModel()
         } catch (err: Exception) {
             Log.e("get advertised model", "request failed", err)
         }
         Log.d("Model", "$model")
-        val downloadManager =
-            context.getSystemService(DownloadManager::class.java)
-        for (path in model.tflite_files) {
-            Log.i("Download TFLite model", path)
-            val request = DownloadManager.Request(Uri.parse("$url/$path"))
-                .setDestinationInExternalFilesDir(context, "models/", path)
-            downloadManager.enqueue(request)
+        val downloadTasks = mutableListOf<Deferred<Unit>>()
+        for (fileUrl in model.tflite_files) {
+            val task = GlobalScope.async {
+                val parentDir = "models/${model.name}/"
+                val fileName = fileUrl.split("/").last()
+                Log.i("Download TFLite model", "$fileUrl -> $parentDir$fileName")
+                train.downloadFile(context, fileUrl, parentDir, fileName)
+            }
+            downloadTasks.add(task)
         }
+        downloadTasks.awaitAll()
+        Log.i("Downloaded TFLite model", "at models/${model.name}/")
     }
 }
