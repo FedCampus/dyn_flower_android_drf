@@ -1,7 +1,10 @@
 from rest_framework import permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
+from rest_framework.views import Request
 from train.models import TFLiteModel
+from train.run import PORT
 from train.serializers import TFLiteModelSerializer
 
 
@@ -14,3 +17,16 @@ def advertise_model(request):
     model = TFLiteModel.objects.first()
     serializer = TFLiteModelSerializer(model)
     return Response(serializer.data)
+
+
+@api_view(["POST"])
+@permission_classes((permissions.AllowAny,))
+def request_server(request: Request):
+    id = request.data.get("id")  # type: ignore
+    if id is None:
+        return Response("Model ID not specified", HTTP_400_BAD_REQUEST)
+    try:
+        model = TFLiteModel.objects.get(pk=id)
+    except TFLiteModel.DoesNotExist:
+        return Response("Model not found", HTTP_404_NOT_FOUND)
+    return Response({"status": "fake", "port": PORT})
