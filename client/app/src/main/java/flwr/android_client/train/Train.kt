@@ -7,9 +7,7 @@ import okhttp3.ResponseBody
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.create
-import retrofit2.http.GET
-import retrofit2.http.Streaming
-import retrofit2.http.Url
+import retrofit2.http.*
 import java.io.File
 
 class Train constructor(url: String) {
@@ -44,6 +42,18 @@ class Train constructor(url: String) {
             }
         }
     }
+
+    interface PostServer {
+        @POST("train/server")
+        suspend fun postServer(@Body body: PostServerData): ServerData
+    }
+
+    suspend fun postServer(model: TFLiteModelData): ServerData {
+        // TODO: Use model id.
+        val body = PostServerData(1)
+        val postServer = retrofit.create<PostServer>()
+        return postServer.postServer(body)
+    }
 }
 
 data class TFLiteModelData(
@@ -51,6 +61,10 @@ data class TFLiteModelData(
     val n_layers: Long,
     val tflite_files: List<String>
 )
+
+data class ServerData(val status: String, val port: Int?)
+
+data class PostServerData(val id: Int)
 
 /**
  * Download advertised model information.
@@ -84,6 +98,8 @@ fun getAdvertisedModel(activity: MainActivity, host: String, port: Int) {
         downloadTasks.awaitAll()
         Log.i("Downloaded TFLite model", "at models/${model.name}/")
         activity.model = model
+        val server = train.postServer(model)
+        Log.i("Server data", "$server")
         activity.connectGrpc(modelDir)
     }
 }
