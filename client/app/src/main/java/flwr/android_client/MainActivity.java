@@ -37,6 +37,7 @@ import flwr.android_client.FlowerServiceGrpc.FlowerServiceStub;
 import flwr.android_client.train.TFLiteModelData;
 import flwr.android_client.train.TrainKt;
 import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 
@@ -158,9 +159,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void connectGrpc(File modelDir) {
+    public void connectGrpc(File modelDir, String host, int port) {
         fc = new FlowerClient(this, modelDir);
-//            channel = ManagedChannelBuilder.forAddress(host, port).maxInboundMessageSize(10 * 1024 * 1024).usePlaintext().build();
+        channel = ManagedChannelBuilder.forAddress(host, port).maxInboundMessageSize(10 * 1024 * 1024).usePlaintext().build();
         runOnUiThread(() -> {
             loadDataButton.setEnabled(true);
             setResultText("Channel object created.");

@@ -38,7 +38,7 @@ def server():
 
     # Start Flower server for 10 rounds of federated learning
     start_server(
-        server_address="0.0.0.0:8080",
+        server_address=f"0.0.0.0:{PORT}",
         config=ServerConfig(num_rounds=10),
         strategy=strategy,
     )

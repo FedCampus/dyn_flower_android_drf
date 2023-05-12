@@ -100,6 +100,10 @@ fun getAdvertisedModel(activity: MainActivity, host: String, port: Int) {
         activity.model = model
         val server = train.postServer(model)
         Log.i("Server data", "$server")
-        activity.connectGrpc(modelDir)
+        if (server.port != null) {
+            activity.connectGrpc(modelDir, host, server.port)
+        } else {
+            Log.w("Flower server not available", server.status)
+        }
     }
 }
