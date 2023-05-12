@@ -49,14 +49,14 @@ class Train constructor(url: String) {
     }
 
     suspend fun postServer(model: TFLiteModelData): ServerData {
-        // TODO: Use model id.
-        val body = PostServerData(1)
+        val body = PostServerData(model.id)
         val postServer = retrofit.create<PostServer>()
         return postServer.postServer(body)
     }
 }
 
 data class TFLiteModelData(
+    val id: Long,
     val name: String,
     val n_layers: Long,
     val tflite_files: List<String>
@@ -64,7 +64,7 @@ data class TFLiteModelData(
 
 data class ServerData(val status: String, val port: Int?)
 
-data class PostServerData(val id: Int)
+data class PostServerData(val id: Long)
 
 /**
  * Download advertised model information.
