@@ -63,3 +63,13 @@ You should get:
 ```python
 {'name': 'CIFAR10_model', 'n_layers': 10, 'tflite_files': ['/static/CIFAR10_model/bottleneck.tflite', '/static/CIFAR10_model/inference.tflite', '/static/CIFAR10_model/initialize.tflite', '/static/CIFAR10_model/optimizer.tflite', '/static/CIFAR10_model/train_head.tflite']}
 ```
+
+## Development
+
+To test on physical devices in development, run with
+
+```sh
+python3 manage.py runserver 0.0.0.0:8000
+```
+
+Find you local IP in your system settings for the physical device to connect to.

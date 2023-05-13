@@ -26,7 +26,8 @@ SECRET_KEY = "django-insecure-k+tuhy#779c*jd@30_$9_e&is(lq%n%xx3w5o)#k=-no_qs3jx
 DEBUG = True
 
 # https://developer.android.com/studio/run/emulator-networking#networkaddresses
-ALLOWED_HOSTS = ["10.0.2.2", "127.0.0.1"]
+# Allow physical device which could be from anywhere.
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
