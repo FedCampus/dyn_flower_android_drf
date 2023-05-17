@@ -88,7 +88,6 @@ def server(model: TFLiteModel) -> tuple[str, int | None]:
     else:
         # Start new server.
         ensure_alive()
-        # TODO: Use model.
-        conn().send(("server", ()))
+        conn().send(("server", model))
         running = model
         return "new", PORT
