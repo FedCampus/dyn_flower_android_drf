@@ -8,7 +8,6 @@ from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy import FedAvgAndroid
 from flwr.server.strategy.aggregate import aggregate
 from numpy.typing import NDArray
-from train.models import ModelParams, TFLiteModel
 
 PORT = 8080
 
@@ -16,7 +15,7 @@ logger = getLogger(__name__)
 
 
 class FedAvgAndroidSave(FedAvgAndroid):
-    model: TFLiteModel | None = None
+    db_conn: Connection | None = None
 
     def aggregate_fit(
         self,
@@ -38,19 +37,14 @@ class FedAvgAndroidSave(FedAvgAndroid):
             for client, fit_res in results
         ]
         aggregated = aggregate(weights_results)
-        self.save_params(aggregated)
+        self.signal_save_params(aggregated)
         return self.ndarrays_to_parameters(aggregated), {}
 
-    def save_params(self, params: list[NDArray]):
-        if self.model is None:
-            # Skip if no model corresponding to the parameters is specified.
+    def signal_save_params(self, params: list[NDArray]):
+        if self.db_conn is None:
+            # Skip if no connection to DB is provided.
             return
-
-        to_save = ModelParams(params=params, tflite_model=self.model)
-        try:
-            to_save.save()
-        except RuntimeError as err:
-            logger.error(err)
+        self.db_conn.send(("save_params", params))
 
 
 def fit_config(server_round: int):
@@ -66,7 +60,7 @@ def fit_config(server_round: int):
     return config
 
 
-def server(model: TFLiteModel | None = None):
+def server(db_conn: Connection | None = None):
     # TODO: Make configurable.
     strategy = FedAvgAndroidSave(
         fraction_fit=1.0,
@@ -78,7 +72,7 @@ def server(model: TFLiteModel | None = None):
         on_fit_config_fn=fit_config,
         initial_parameters=None,
     )
-    strategy.model = model
+    strategy.db_conn = db_conn
 
     # Start Flower server for 10 rounds of federated learning
     start_server(
@@ -96,8 +90,9 @@ def execute(conn: Connection):
         conn.send("pong")
     elif kind == "server":
         logger.warning(f"Launching server with arguments `{msg}`.")
-        if isinstance(msg, TFLiteModel):
+        if isinstance(msg, Connection):
             server(msg)
+            msg.send(("done", None))
         else:
             if msg is not None:
                 logger.error(f"Unknown argument `{msg}` for Flower server.")
