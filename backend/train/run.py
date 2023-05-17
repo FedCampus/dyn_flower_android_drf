@@ -60,7 +60,7 @@ def fit_config(server_round: int):
     return config
 
 
-def server(db_conn: Connection | None = None):
+def flwr_server(db_conn: Connection | None = None):
     # TODO: Make configurable.
     strategy = FedAvgAndroidSave(
         fraction_fit=1.0,
@@ -74,40 +74,12 @@ def server(db_conn: Connection | None = None):
     )
     strategy.db_conn = db_conn
 
+    logger.warning("Starting Flower server.")
     # Start Flower server for 10 rounds of federated learning
     start_server(
         server_address=f"0.0.0.0:{PORT}",
         config=ServerConfig(num_rounds=10),
         strategy=strategy,
     )
-
-
-def execute(conn: Connection):
-    """Execute one instruction received."""
-    kind, msg = conn.recv()
-    if kind == "ping":
-        logger.warning(f"Received `{msg}`.")
-        conn.send("pong")
-    elif kind == "server":
-        logger.warning(f"Launching server with arguments `{msg}`.")
-        if isinstance(msg, Connection):
-            server(msg)
-            msg.send(("done", None))
-        else:
-            if msg is not None:
-                logger.error(f"Unknown argument `{msg}` for Flower server.")
-            server()
-        conn.send("done")
-    else:
-        logger.error(f"Unknown kind `{kind}` with message `{msg}`.")
-        conn.send("cannot understand")
-
-
-def run(conn: Connection):
-    """Run a procedure that listens to instructions and executes them."""
-    logger.warning("Runner started.")
-    while True:
-        try:
-            execute(conn)
-        except KeyboardInterrupt:
-            break
+    if db_conn is not None:
+        db_conn.send(("done", None))
