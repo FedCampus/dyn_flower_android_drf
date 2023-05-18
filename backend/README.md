@@ -12,6 +12,8 @@ python3 manage.py migrate
 
 Download the models to `static/CIFAR10_model`.
 
+The model files are at <https://www.dropbox.com/s/tubgpepk2q6xiny/models.zip?dl=1>.
+
 Your `static/` should look like this:
 
 ```

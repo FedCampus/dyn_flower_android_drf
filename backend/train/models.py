@@ -1,4 +1,7 @@
+from json import JSONEncoder
+
 from django.db import models
+from numpy import ndarray
 
 
 class TFLiteModel(models.Model):
@@ -19,3 +22,17 @@ class TFLiteFile(models.Model):
 
     def __str__(self) -> str:
         return f"{self.path}"
+
+
+class NumpyEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, ndarray):
+            return obj.tolist()
+        return JSONEncoder.default(self, obj)
+
+
+class ModelParams(models.Model):
+    params = models.JSONField(encoder=NumpyEncoder)
+    tflite_model = models.ForeignKey(
+        TFLiteModel, on_delete=models.CASCADE, related_name="params"
+    )
