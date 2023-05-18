@@ -60,7 +60,7 @@ def fit_config(server_round: int):
     return config
 
 
-def flwr_server(db_conn: Connection | None = None):
+def flwr_server(db_conn: Connection | None, initial_parameters: Parameters | None):
     # TODO: Make configurable.
     strategy = FedAvgAndroidSave(
         fraction_fit=1.0,
@@ -70,7 +70,7 @@ def flwr_server(db_conn: Connection | None = None):
         min_available_clients=2,
         evaluate_fn=None,
         on_fit_config_fn=fit_config,
-        initial_parameters=None,
+        initial_parameters=initial_parameters,
     )
     strategy.db_conn = db_conn
 

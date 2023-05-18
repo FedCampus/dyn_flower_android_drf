@@ -3,6 +3,7 @@ from multiprocessing import Pipe, Process
 from multiprocessing.connection import Connection
 from threading import Thread
 
+from flwr.common import ndarrays_to_parameters
 from train.models import ModelParams, TFLiteModel
 from train.run import PORT, flwr_server
 
@@ -39,6 +40,14 @@ def monitor_db_conn(db_conn: Connection):
     logger.warning("DB monitor thread exiting.")
 
 
+def model_params(model: TFLiteModel):
+    try:
+        params: ModelParams = model.params.last()  # type: ignore
+        return ndarrays_to_parameters(params.params)
+    except RuntimeError as err:
+        logger.warning(err)
+
+
 TWELVE_HOURS = 12 * 60 * 60
 
 
@@ -47,8 +56,9 @@ class Server:
 
     def __init__(self, model: TFLiteModel) -> None:
         self.model = model
+        params = model_params(model)
         db_conn, db_conn1 = Pipe()
-        self.process = Process(target=flwr_server, args=(db_conn,))
+        self.process = Process(target=flwr_server, args=(db_conn, params))
         self.process.start()
         self.thread = Thread(target=monitor_db_conn, args=(db_conn1,))
         self.thread.start()
