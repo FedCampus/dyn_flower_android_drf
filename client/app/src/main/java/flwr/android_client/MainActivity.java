@@ -284,7 +284,7 @@ public class MainActivity extends AppCompatActivity {
                 requestObserver.onNext(c);
                 activity.setResultText("Response sent to the server");
             } catch (Exception e) {
-                Log.e(TAG, e.getMessage());
+                e.printStackTrace();
             }
         }
     }
