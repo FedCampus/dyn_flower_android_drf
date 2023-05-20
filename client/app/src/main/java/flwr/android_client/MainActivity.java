@@ -248,30 +248,34 @@ public class MainActivity extends AppCompatActivity {
                     activity.setResultText("Handling Fit request from the server.");
 
                     List<ByteString> layers = message.getFitIns().getParameters().getTensorsList();
+                    int nLayers = layers.size();
+                    assert nLayers == activity.model.getN_layers();
 
                     Scalar epoch_config = message.getFitIns().getConfigMap().getOrDefault("local_epochs", Scalar.newBuilder().setSint64(1).build());
 
                     assert epoch_config != null;
                     int local_epochs = (int) epoch_config.getSint64();
 
-                    // Our model has 10 layers
-                    ByteBuffer[] newWeights = new ByteBuffer[10];
-                    for (int i = 0; i < 10; i++) {
+                    ByteBuffer[] newWeights = new ByteBuffer[nLayers];
+                    for (int i = 0; i < nLayers; i++) {
                         newWeights[i] = ByteBuffer.wrap(layers.get(i).toByteArray());
                     }
 
                     Pair<ByteBuffer[], Integer> outputs = activity.fc.fit(newWeights, local_epochs);
                     c = fitResAsProto(outputs.first, outputs.second);
                 } else if (message.hasEvaluateIns()) {
-                    Log.e(TAG, "Handling EvaluateIns");
+                    Log.d(TAG, "Handling EvaluateIns");
                     activity.setResultText("Handling Evaluate request from the server");
 
                     List<ByteString> layers = message.getEvaluateIns().getParameters().getTensorsList();
+                    int nLayers = layers.size();
+                    assert nLayers == activity.model.getN_layers();
 
-                    // Our model has 10 layers
-                    ByteBuffer[] newWeights = new ByteBuffer[10];
-                    for (int i = 0; i < 10; i++) {
-                        newWeights[i] = ByteBuffer.wrap(layers.get(i).toByteArray());
+                    ByteBuffer[] newWeights = new ByteBuffer[nLayers];
+                    for (int i = 0; i < nLayers; i++) {
+                        byte[] bytes = layers.get(i).toByteArray();
+                        Log.d("Evaluate: newWeights[" + i + "]:", "Bytes: " + bytes.length);
+                        newWeights[i] = ByteBuffer.wrap(bytes);
                     }
                     Pair<Pair<Float, Float>, Integer> inference = activity.fc.evaluate(newWeights);
 

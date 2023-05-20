@@ -99,7 +99,9 @@ public class FlowerClient {
             int i = 0;
             while ((line = reader.readLine()) != null) {
                 i++;
-                Log.e(TAG, i + "th training image loaded");
+                if (i % 100 == 0) {
+                    Log.i(TAG, i + "th training image loaded");
+                }
                 addSample("data/" + line, true);
             }
             reader.close();
@@ -108,7 +110,9 @@ public class FlowerClient {
             reader = new BufferedReader(new InputStreamReader(this.context.getAssets().open("data/partition_" + (device_id - 1) + "_test.txt")));
             while ((line = reader.readLine()) != null) {
                 i++;
-                Log.e(TAG, i + "th test image loaded");
+                if (i % 100 == 0) {
+                    Log.i(TAG, i + "th test image loaded");
+                }
                 addSample("data/" + line, false);
             }
             reader.close();
