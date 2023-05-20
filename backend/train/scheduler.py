@@ -3,8 +3,8 @@ from multiprocessing import Pipe, Process
 from multiprocessing.connection import Connection
 from threading import Thread
 
-from flwr.common import ndarrays_to_parameters
-from numpy import array
+from flwr.common import Parameters
+from numpy import array, single
 from train.models import ModelParams, TFLiteModel
 from train.run import PORT, flwr_server
 
@@ -44,9 +44,9 @@ def monitor_db_conn(db_conn: Connection):
 def model_params(model: TFLiteModel):
     try:
         params: ModelParams = model.params.last()  # type: ignore
-        return ndarrays_to_parameters(
-            array(param) for param in params.params  # type:ignore
-        )
+        # TODO: Support not just float 32.
+        tensors = [array(param, dtype=single).tobytes() for param in params.params]
+        return Parameters(tensors, tensor_type="numpy.ndarray")
     except RuntimeError as err:
         logger.warning(err)
 

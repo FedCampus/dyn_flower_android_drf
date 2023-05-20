@@ -70,8 +70,7 @@ def flwr_server(db_conn: Connection | None, initial_parameters: Parameters | Non
         min_available_clients=1,
         evaluate_fn=None,
         on_fit_config_fn=fit_config,
-        initial_parameters=None,
-        # initial_parameters=initial_parameters, # Fix me: wrong size.
+        initial_parameters=initial_parameters,
     )
     strategy.db_conn = db_conn
 

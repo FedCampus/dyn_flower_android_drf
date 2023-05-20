@@ -258,7 +258,9 @@ public class MainActivity extends AppCompatActivity {
 
                     ByteBuffer[] newWeights = new ByteBuffer[nLayers];
                     for (int i = 0; i < nLayers; i++) {
-                        newWeights[i] = ByteBuffer.wrap(layers.get(i).toByteArray());
+                        byte[] bytes = layers.get(i).toByteArray();
+                        Log.d("Fit: newWeights[" + i + "]:", "Bytes: " + bytes.length);
+                        newWeights[i] = ByteBuffer.wrap(bytes);
                     }
 
                     Pair<ByteBuffer[], Integer> outputs = activity.fc.fit(newWeights, local_epochs);
