@@ -1,7 +1,7 @@
 package flwr.android_client.train
 
+import android.content.Context
 import android.util.Log
-import flwr.android_client.MainActivity
 import kotlinx.coroutines.*
 import okhttp3.ResponseBody
 import retrofit2.Retrofit
@@ -21,6 +21,9 @@ class Train constructor(url: String) {
         suspend fun getAdvertised(): TFLiteModelData
     }
 
+    /**
+     * Download advertised model information.
+     */
     suspend fun getAdvertisedModel(): TFLiteModelData {
         val getAdvertised = retrofit.create<GetAdvertised>()
         return getAdvertised.getAdvertised()
@@ -53,6 +56,30 @@ class Train constructor(url: String) {
         val postServer = retrofit.create<PostServer>()
         return postServer.postServer(body)
     }
+
+    /**
+     * Download TFLite files to `"models/$path"`.
+     */
+    suspend fun downloadModelFiles(model: TFLiteModelData, modelDir: File) {
+        val scope = CoroutineScope(Job())
+        val downloadTasks = mutableListOf<Deferred<Unit>>()
+        for (fileUrl in model.tflite_files) {
+            val task = scope.async {
+                val fileName = fileUrl.split("/").last()
+                Log.i("Download TFLite model", "$fileUrl -> ${modelDir.absolutePath}$fileName")
+                downloadFile(fileUrl, modelDir, fileName)
+            }
+            downloadTasks.add(task)
+        }
+        downloadTasks.awaitAll()
+        Log.i("Downloaded TFLite model", "at models/${model.name}/")
+    }
+
+    suspend fun getServerInfo(model: TFLiteModelData): ServerData {
+        val server = postServer(model)
+        Log.i("Server data", "$server")
+        return server
+    }
 }
 
 data class TFLiteModelData(
@@ -60,50 +87,19 @@ data class TFLiteModelData(
     val name: String,
     val n_layers: Long,
     val tflite_files: List<String>
-)
+) {
+    fun getModelDir(context: Context): File {
+        return context.getExternalFilesDir("models/$name/")!!
+    }
+}
 
 data class ServerData(val status: String, val port: Int?)
 
 data class PostServerData(val id: Long)
 
-/**
- * Download advertised model information.
-Download TFLite files to `"models/$path"`.
- */
-@OptIn(DelicateCoroutinesApi::class)
-fun getAdvertisedModel(
-    activity: MainActivity,
-    host: String,
-    port: Int,
-    callback: (TFLiteModelData, File, ServerData) -> Unit
-) {
+fun generateUrl(host: String, port: Int): String {
     // TODO: HTTPS
     val url = "http://$host:$port"
     Log.i("URL", url)
-    GlobalScope.launch {
-        val train = Train(url)
-        lateinit var model: TFLiteModelData
-        try {
-            model = train.getAdvertisedModel()
-        } catch (err: Exception) {
-            Log.e("get advertised model", "request failed", err)
-        }
-        Log.d("Model", "$model")
-        val downloadTasks = mutableListOf<Deferred<Unit>>()
-        val modelPath = "models/${model.name}/"
-        val modelDir = activity.getExternalFilesDir(modelPath)!!
-        for (fileUrl in model.tflite_files) {
-            val task = GlobalScope.async {
-                val fileName = fileUrl.split("/").last()
-                Log.i("Download TFLite model", "$fileUrl -> $modelPath$fileName")
-                train.downloadFile(fileUrl, modelDir, fileName)
-            }
-            downloadTasks.add(task)
-        }
-        downloadTasks.awaitAll()
-        Log.i("Downloaded TFLite model", "at models/${model.name}/")
-        val server = train.postServer(model)
-        Log.i("Server data", "$server")
-        callback(model, modelDir, server)
-    }
+    return url
 }
