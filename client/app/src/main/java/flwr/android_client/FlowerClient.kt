@@ -1,147 +1,125 @@
-package flwr.android_client;
+package flwr.android_client
 
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.os.ConditionVariable;
-import android.util.Log;
-import android.util.Pair;
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.os.ConditionVariable
+import android.util.Log
+import android.util.Pair
+import androidx.lifecycle.MutableLiveData
+import org.tensorflow.lite.examples.transfer.api.ExternalModelLoader
+import java.io.BufferedReader
+import java.io.File
+import java.io.InputStreamReader
+import java.nio.ByteBuffer
+import java.util.concurrent.ExecutionException
 
-import androidx.lifecycle.MutableLiveData;
+class FlowerClient constructor(val context: Context, modelDir: File) {
+    private val isTraining = ConditionVariable()
+    private val tlModel = run {
+        val modelLoader = ExternalModelLoader(modelDir)
+        TransferLearningModelWrapper(modelLoader)
+    }
+    private val lastLoss = MutableLiveData<Float>()
+    private var localEpochs = 1
 
-import org.tensorflow.lite.examples.transfer.api.ExternalModelLoader;
-import org.tensorflow.lite.examples.transfer.api.ModelLoader;
+    val weights: Array<ByteBuffer>
+        get() = tlModel.parameters
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.ByteBuffer;
-import java.util.concurrent.ExecutionException;
-
-public class FlowerClient {
-
-    private static final int LOWER_BYTE_MASK = 0xFF;
-    private static final String TAG = "Flower";
-    private final ConditionVariable isTraining = new ConditionVariable();
-    private final TransferLearningModelWrapper tlModel;
-    private final MutableLiveData<Float> lastLoss = new MutableLiveData<>();
-    private final Context context;
-    private int local_epochs = 1;
-
-    public FlowerClient(Context context, File modelDir) {
-        ModelLoader modelLoader = new ExternalModelLoader(modelDir);
-        this.tlModel = new TransferLearningModelWrapper(modelLoader);
-        this.context = context;
+    fun fit(weights: Array<ByteBuffer?>?, epochs: Int): Pair<Array<ByteBuffer>, Int> {
+        localEpochs = epochs
+        tlModel.updateParameters(weights)
+        isTraining.close()
+        tlModel.train(localEpochs)
+        tlModel.enableTraining { epoch: Int, newLoss: Float -> setLastLoss(epoch, newLoss) }
+        Log.d(TAG, "Training enabled. Local Epochs = $localEpochs")
+        isTraining.block()
+        return Pair.create(this.weights, tlModel.size_Training)
     }
 
-    /**
-     * Normalizes a camera image to [0; 1], cropping it
-     * to size expected by the model and adjusting for camera rotation.
-     */
-    private static float[] prepareImage(Bitmap bitmap) {
-        int modelImageSize = TransferLearningModelWrapper.IMAGE_SIZE;
-
-        float[] normalizedRgb = new float[modelImageSize * modelImageSize * 3];
-        int nextIdx = 0;
-        for (int y = 0; y < modelImageSize; y++) {
-            for (int x = 0; x < modelImageSize; x++) {
-                int rgb = bitmap.getPixel(x, y);
-
-                float r = ((rgb >> 16) & LOWER_BYTE_MASK) * (1 / 255.0f);
-                float g = ((rgb >> 8) & LOWER_BYTE_MASK) * (1 / 255.0f);
-                float b = (rgb & LOWER_BYTE_MASK) * (1 / 255.0f);
-
-                normalizedRgb[nextIdx++] = r;
-                normalizedRgb[nextIdx++] = g;
-                normalizedRgb[nextIdx++] = b;
-            }
-        }
-
-        return normalizedRgb;
+    fun evaluate(weights: Array<ByteBuffer?>?): Pair<Pair<Float, Float>, Int> {
+        tlModel.updateParameters(weights)
+        tlModel.disableTraining()
+        return Pair.create(tlModel.calculateTestStatistics(), tlModel.size_Testing)
     }
 
-    public ByteBuffer[] getWeights() {
-        return tlModel.getParameters();
-    }
-
-    public Pair<ByteBuffer[], Integer> fit(ByteBuffer[] weights, int epochs) {
-
-        this.local_epochs = epochs;
-        tlModel.updateParameters(weights);
-        isTraining.close();
-        tlModel.train(this.local_epochs);
-        tlModel.enableTraining(this::setLastLoss);
-        Log.e(TAG, "Training enabled. Local Epochs = " + this.local_epochs);
-        isTraining.block();
-        return Pair.create(getWeights(), tlModel.getSize_Training());
-    }
-
-    public Pair<Pair<Float, Float>, Integer> evaluate(ByteBuffer[] weights) {
-        tlModel.updateParameters(weights);
-        tlModel.disableTraining();
-        return Pair.create(tlModel.calculateTestStatistics(), tlModel.getSize_Testing());
-    }
-
-    public void setLastLoss(int epoch, float newLoss) {
-        if (epoch == this.local_epochs - 1) {
-            Log.e(TAG, "Training finished after epoch = " + epoch);
-            lastLoss.postValue(newLoss);
-            tlModel.disableTraining();
-            isTraining.open();
+    fun setLastLoss(epoch: Int, newLoss: Float) {
+        if (epoch == localEpochs - 1) {
+            Log.d(TAG, "Training finished after epoch = $epoch")
+            lastLoss.postValue(newLoss)
+            tlModel.disableTraining()
+            isTraining.open()
         }
     }
 
-    public void loadData(int device_id) {
-        try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(this.context.getAssets().open("data/partition_" + (device_id - 1) + "_train.txt")));
-            String line;
-            int i = 0;
-            while ((line = reader.readLine()) != null) {
-                i++;
-                if (i % 100 == 0) {
-                    Log.i(TAG, i + "th training image loaded");
-                }
-                addSample("data/" + line, true);
-            }
-            reader.close();
-
-            i = 0;
-            reader = new BufferedReader(new InputStreamReader(this.context.getAssets().open("data/partition_" + (device_id - 1) + "_test.txt")));
-            while ((line = reader.readLine()) != null) {
-                i++;
-                if (i % 100 == 0) {
-                    Log.i(TAG, i + "th test image loaded");
-                }
-                addSample("data/" + line, false);
-            }
-            reader.close();
-
-        } catch (IOException ex) {
-            ex.printStackTrace();
+    private fun readAssetLines(fileName: String, call: (Int, String) -> Unit) {
+        BufferedReader(InputStreamReader(context.assets.open(fileName))).useLines {
+            it.forEachIndexed(call)
         }
     }
 
-    private void addSample(String photoPath, Boolean isTraining) throws IOException {
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-        Bitmap bitmap = BitmapFactory.decodeStream(this.context.getAssets().open(photoPath), null, options);
-        String sampleClass = get_class(photoPath);
+    @Throws
+    fun loadData(device_id: Int) {
+        readAssetLines("data/partition_${device_id - 1}_train.txt") { index, line ->
+            if (index % 500 == 499) {
+                Log.i(TAG, index.toString() + "th training image loaded")
+            }
+            addSample("data/$line", true)
+        }
+        readAssetLines("data/partition_${device_id - 1}_test.txt") { index, line ->
+            if (index % 500 == 499) {
+                Log.i(TAG, index.toString() + "th test image loaded")
+            }
+            addSample("data/$line", false)
+        }
+    }
+
+    @Throws
+    private fun addSample(photoPath: String, isTraining: Boolean) {
+        val options = BitmapFactory.Options()
+        options.inPreferredConfig = Bitmap.Config.ARGB_8888
+        val bitmap = BitmapFactory.decodeStream(context.assets.open(photoPath), null, options)
+        val sampleClass = getClass(photoPath)
 
         // get rgb equivalent and class
-        float[] rgbImage = prepareImage(bitmap);
+        val rgbImage = prepareImage(bitmap)
 
         // add to the list.
         try {
-            this.tlModel.addSample(rgbImage, sampleClass, isTraining).get();
-        } catch (ExecutionException e) {
-            throw new RuntimeException("Failed to add sample to model", e.getCause());
-        } catch (InterruptedException e) {
+            tlModel.addSample(rgbImage, sampleClass, isTraining).get()
+        } catch (e: ExecutionException) {
+            throw RuntimeException("Failed to add sample to model", e.cause)
+        } catch (e: InterruptedException) {
             // no-op
         }
     }
 
-    public String get_class(String path) {
-        return path.split("/")[2];
+    fun getClass(path: String): String {
+        return path.split("/".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[2]
     }
+}
+
+private const val LOWER_BYTE_MASK = 0xFF
+private const val TAG = "Flower"
+
+/**
+ * Normalizes a camera image to [0; 1], cropping it
+ * to size expected by the model and adjusting for camera rotation.
+ */
+private fun prepareImage(bitmap: Bitmap?): FloatArray {
+    val modelImageSize = TransferLearningModelWrapper.IMAGE_SIZE
+    val normalizedRgb = FloatArray(modelImageSize * modelImageSize * 3)
+    var nextIdx = 0
+    for (y in 0 until modelImageSize) {
+        for (x in 0 until modelImageSize) {
+            val rgb = bitmap!!.getPixel(x, y)
+            val r = (rgb shr 16 and LOWER_BYTE_MASK) * (1 / 255.0f)
+            val g = (rgb shr 8 and LOWER_BYTE_MASK) * (1 / 255.0f)
+            val b = (rgb and LOWER_BYTE_MASK) * (1 / 255.0f)
+            normalizedRgb[nextIdx++] = r
+            normalizedRgb[nextIdx++] = g
+            normalizedRgb[nextIdx++] = b
+        }
+    }
+    return normalizedRgb
 }

@@ -93,7 +93,7 @@ class MainActivity : AppCompatActivity() {
 
     suspend fun loadDataInBackground() {
         withContext(Dispatchers.IO) {
-            val result = runWithStacktraceOr("Training dataset is loaded in memory.") {
+            val result = runWithStacktraceOr("Failed to load training dataset.") {
                 train.flowerClient.loadData(device_id.text.toString().toInt())
                 "Training dataset is loaded in memory. Ready to train!"
             }
