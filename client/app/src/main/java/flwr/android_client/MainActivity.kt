@@ -1,6 +1,5 @@
 package flwr.android_client
 
-import android.app.Activity
 import android.icu.text.SimpleDateFormat
 import android.os.Bundle
 import android.text.TextUtils
@@ -14,13 +13,10 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.google.protobuf.ByteString
-import flwr.android_client.ClientMessage.*
-import flwr.android_client.FlowerServiceGrpc.FlowerServiceStub
+import flwr.android_client.train.FlowerServiceRunnable
 import flwr.android_client.train.Train
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
-import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -28,14 +24,12 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
-import java.nio.ByteBuffer
 import java.util.*
-import java.util.concurrent.CountDownLatch
 
 class MainActivity : AppCompatActivity() {
     private val scope = MainScope()
-    private lateinit var train: Train
-    private lateinit var fc: FlowerClient
+    lateinit var train: Train
+    lateinit var fc: FlowerClient
     private lateinit var ip: EditText
     private lateinit var port: EditText
     private lateinit var loadDataButton: Button
@@ -79,7 +73,7 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_LONG
             ).show()
         } else {
-            hideKeyboard(this)
+            hideKeyboard()
             setResultText("Loading the local training dataset in memory. It will take several seconds.")
             loadDataButton.isEnabled = false
             scope.launch {
@@ -128,7 +122,7 @@ class MainActivity : AppCompatActivity() {
                     Log.e(TAG, "connectInBackground", err)
                 }
             }
-            hideKeyboard(this)
+            hideKeyboard()
             connectButton.isEnabled = false
             setResultText("Creating channel object.")
         }
@@ -187,126 +181,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private class FlowerServiceRunnable {
-        protected var failed: Throwable? = null
-        private var requestObserver: StreamObserver<ClientMessage>? = null
-        fun run(asyncStub: FlowerServiceStub, activity: MainActivity) {
-            join(asyncStub, activity)
+    fun hideKeyboard() {
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        var view = currentFocus
+        if (view == null) {
+            view = View(this)
         }
-
-        @Throws(RuntimeException::class)
-        private fun join(asyncStub: FlowerServiceStub, activity: MainActivity) {
-            val finishLatch = CountDownLatch(1)
-            requestObserver = asyncStub.join(
-                object : StreamObserver<ServerMessage> {
-                    override fun onNext(msg: ServerMessage) {
-                        handleMessage(msg, activity)
-                    }
-
-                    override fun onError(t: Throwable) {
-                        t.printStackTrace()
-                        failed = t
-                        finishLatch.countDown()
-                        Log.e(TAG, t.message!!)
-                    }
-
-                    override fun onCompleted() {
-                        finishLatch.countDown()
-                        Log.e(TAG, "Done")
-                    }
-                })
-        }
-
-        private fun handleMessage(message: ServerMessage, activity: MainActivity) {
-            try {
-                val weights: Array<ByteBuffer>
-                var c: ClientMessage? = null
-                if (message.hasGetParametersIns()) {
-                    Log.e(TAG, "Handling GetParameters")
-                    activity.setResultText("Handling GetParameters message from the server.")
-                    weights = activity.fc.weights
-                    c = weightsAsProto(weights)
-                } else if (message.hasFitIns()) {
-                    Log.e(TAG, "Handling FitIns")
-                    activity.setResultText("Handling Fit request from the server.")
-                    val layers = message.fitIns.parameters.tensorsList
-                    val nLayers = layers.size
-                    assert(nLayers.toLong() == activity.train.model.n_layers)
-                    val epoch_config = message.fitIns.configMap.getOrDefault(
-                        "local_epochs",
-                        Scalar.newBuilder().setSint64(1).build()
-                    )!!
-                    val local_epochs = epoch_config.sint64.toInt()
-                    val newWeights = arrayOfNulls<ByteBuffer>(nLayers)
-                    for (i in 0 until nLayers) {
-                        val bytes = layers[i].toByteArray()
-                        newWeights[i] = ByteBuffer.wrap(bytes)
-                    }
-                    val outputs = activity.fc.fit(newWeights, local_epochs)
-                    c = fitResAsProto(outputs.first, outputs.second)
-                } else if (message.hasEvaluateIns()) {
-                    Log.d(TAG, "Handling EvaluateIns")
-                    activity.setResultText("Handling Evaluate request from the server")
-                    val layers = message.evaluateIns.parameters.tensorsList
-                    val nLayers = layers.size
-                    assert(nLayers.toLong() == activity.train.model.n_layers)
-                    val newWeights = arrayOfNulls<ByteBuffer>(nLayers)
-                    for (i in 0 until nLayers) {
-                        val bytes = layers[i].toByteArray()
-                        newWeights[i] = ByteBuffer.wrap(bytes)
-                    }
-                    val inference = activity.fc.evaluate(newWeights)
-                    val loss = inference.first.first
-                    val accuracy = inference.first.second
-                    activity.setResultText("Test Accuracy after this round = $accuracy")
-                    val test_size = inference.second
-                    c = evaluateResAsProto(loss, test_size)
-                }
-                requestObserver!!.onNext(c)
-                activity.setResultText("Response sent to the server")
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    companion object {
-        private const val TAG = "Flower"
-        fun hideKeyboard(activity: Activity) {
-            val imm = activity.getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-            var view = activity.currentFocus
-            if (view == null) {
-                view = View(activity)
-            }
-            imm.hideSoftInputFromWindow(view.windowToken, 0)
-        }
-
-        private fun weightsAsProto(weights: Array<ByteBuffer>): ClientMessage {
-            val layers: MutableList<ByteString> = ArrayList()
-            for (weight in weights) {
-                layers.add(ByteString.copyFrom(weight))
-            }
-            val p = Parameters.newBuilder().addAllTensors(layers).setTensorType("ND").build()
-            val res = GetParametersRes.newBuilder().setParameters(p).build()
-            return newBuilder().setGetParametersRes(res).build()
-        }
-
-        private fun fitResAsProto(weights: Array<ByteBuffer>, training_size: Int): ClientMessage {
-            val layers: MutableList<ByteString> = ArrayList()
-            for (weight in weights) {
-                layers.add(ByteString.copyFrom(weight))
-            }
-            val p = Parameters.newBuilder().addAllTensors(layers).setTensorType("ND").build()
-            val res =
-                FitRes.newBuilder().setParameters(p).setNumExamples(training_size.toLong()).build()
-            return newBuilder().setFitRes(res).build()
-        }
-
-        private fun evaluateResAsProto(accuracy: Float, testing_size: Int): ClientMessage {
-            val res =
-                EvaluateRes.newBuilder().setLoss(accuracy).setNumExamples(testing_size.toLong())
-                    .build()
-            return newBuilder().setEvaluateRes(res).build()
-        }
+        imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 }
+
+private const val TAG = "Flower"
