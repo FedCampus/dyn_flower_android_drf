@@ -10,7 +10,47 @@ import retrofit2.create
 import retrofit2.http.*
 import java.io.File
 
-class Train constructor(url: String) {
+class Train constructor(host: String, port: Int) {
+    val url = generateUrl(host, port)
+    val client = HttpClient(url)
+    lateinit var model: TFLiteModelData
+    lateinit var server: ServerData
+
+    /**
+     * Download advertised model information.
+     */
+    suspend fun getAdvertisedModel(): TFLiteModelData {
+        model = client.getAdvertisedModel()
+        Log.d("Model", "$model")
+        return model
+    }
+
+    /**
+     * Download TFLite files to `"models/$path"`.
+     */
+    suspend fun downloadModelFiles(modelDir: File) {
+        val scope = CoroutineScope(Job())
+        val downloadTasks = mutableListOf<Deferred<Unit>>()
+        for (fileUrl in model.tflite_files) {
+            val task = scope.async {
+                val fileName = fileUrl.split("/").last()
+                Log.i("Download TFLite model", "$fileUrl -> ${modelDir.absolutePath}$fileName")
+                client.downloadFile(fileUrl, modelDir, fileName)
+            }
+            downloadTasks.add(task)
+        }
+        downloadTasks.awaitAll()
+        Log.i("Downloaded TFLite model", "at models/${model.name}/")
+    }
+
+    suspend fun getServerInfo(): ServerData {
+        server = client.postServer(model)
+        Log.i("Server data", "$server")
+        return server
+    }
+}
+
+class HttpClient constructor(url: String) {
     private val retrofit = Retrofit.Builder()
         // https://developer.android.com/studio/run/emulator-networking#networkaddresses
         .baseUrl(url)
@@ -57,29 +97,6 @@ class Train constructor(url: String) {
         return postServer.postServer(body)
     }
 
-    /**
-     * Download TFLite files to `"models/$path"`.
-     */
-    suspend fun downloadModelFiles(model: TFLiteModelData, modelDir: File) {
-        val scope = CoroutineScope(Job())
-        val downloadTasks = mutableListOf<Deferred<Unit>>()
-        for (fileUrl in model.tflite_files) {
-            val task = scope.async {
-                val fileName = fileUrl.split("/").last()
-                Log.i("Download TFLite model", "$fileUrl -> ${modelDir.absolutePath}$fileName")
-                downloadFile(fileUrl, modelDir, fileName)
-            }
-            downloadTasks.add(task)
-        }
-        downloadTasks.awaitAll()
-        Log.i("Downloaded TFLite model", "at models/${model.name}/")
-    }
-
-    suspend fun getServerInfo(model: TFLiteModelData): ServerData {
-        val server = postServer(model)
-        Log.i("Server data", "$server")
-        return server
-    }
 }
 
 data class TFLiteModelData(

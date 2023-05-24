@@ -17,9 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.protobuf.ByteString
 import flwr.android_client.ClientMessage.*
 import flwr.android_client.FlowerServiceGrpc.FlowerServiceStub
-import flwr.android_client.train.TFLiteModelData
 import flwr.android_client.train.Train
-import flwr.android_client.train.generateUrl
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import io.grpc.stub.StreamObserver
@@ -37,7 +35,6 @@ import java.util.concurrent.CountDownLatch
 class MainActivity : AppCompatActivity() {
     private val scope = MainScope()
     private lateinit var train: Train
-    private lateinit var model: TFLiteModelData
     private lateinit var fc: FlowerClient
     private lateinit var ip: EditText
     private lateinit var port: EditText
@@ -140,13 +137,11 @@ class MainActivity : AppCompatActivity() {
     suspend fun connectInBackground(host: String, port: Int) {
         val activity = this
         withContext(Dispatchers.IO) {
-            val url = generateUrl(host, port)
-            train = Train(url)
-            model = train.getAdvertisedModel()
-            Log.d("Model", "$model")
+            train = Train(host, port)
+            val model = train.getAdvertisedModel()
             val modelDir = model.getModelDir(activity)
-            train.downloadModelFiles(model, modelDir)
-            val server = train.getServerInfo(model)
+            train.downloadModelFiles(modelDir)
+            val server = train.getServerInfo()
             if (server.port != null) {
                 connectGrpc(modelDir, host, server.port)
             } else {
@@ -236,7 +231,7 @@ class MainActivity : AppCompatActivity() {
                     activity.setResultText("Handling Fit request from the server.")
                     val layers = message.fitIns.parameters.tensorsList
                     val nLayers = layers.size
-                    assert(nLayers.toLong() == activity.model.n_layers)
+                    assert(nLayers.toLong() == activity.train.model.n_layers)
                     val epoch_config = message.fitIns.configMap.getOrDefault(
                         "local_epochs",
                         Scalar.newBuilder().setSint64(1).build()
@@ -245,7 +240,6 @@ class MainActivity : AppCompatActivity() {
                     val newWeights = arrayOfNulls<ByteBuffer>(nLayers)
                     for (i in 0 until nLayers) {
                         val bytes = layers[i].toByteArray()
-                        Log.d("Fit: newWeights[$i]:", "Bytes: " + bytes.size)
                         newWeights[i] = ByteBuffer.wrap(bytes)
                     }
                     val outputs = activity.fc.fit(newWeights, local_epochs)
@@ -255,11 +249,10 @@ class MainActivity : AppCompatActivity() {
                     activity.setResultText("Handling Evaluate request from the server")
                     val layers = message.evaluateIns.parameters.tensorsList
                     val nLayers = layers.size
-                    assert(nLayers.toLong() == activity.model.n_layers)
+                    assert(nLayers.toLong() == activity.train.model.n_layers)
                     val newWeights = arrayOfNulls<ByteBuffer>(nLayers)
                     for (i in 0 until nLayers) {
                         val bytes = layers[i].toByteArray()
-                        Log.d("Evaluate: newWeights[$i]:", "Bytes: " + bytes.size)
                         newWeights[i] = ByteBuffer.wrap(bytes)
                     }
                     val inference = activity.fc.evaluate(newWeights)
