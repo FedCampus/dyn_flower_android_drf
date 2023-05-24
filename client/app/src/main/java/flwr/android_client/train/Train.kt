@@ -71,7 +71,12 @@ data class PostServerData(val id: Long)
 Download TFLite files to `"models/$path"`.
  */
 @OptIn(DelicateCoroutinesApi::class)
-fun getAdvertisedModel(activity: MainActivity, host: String, port: Int) {
+fun getAdvertisedModel(
+    activity: MainActivity,
+    host: String,
+    port: Int,
+    callback: (TFLiteModelData, File, ServerData) -> Unit
+) {
     // TODO: HTTPS
     val url = "http://$host:$port"
     Log.i("URL", url)
@@ -97,13 +102,8 @@ fun getAdvertisedModel(activity: MainActivity, host: String, port: Int) {
         }
         downloadTasks.awaitAll()
         Log.i("Downloaded TFLite model", "at models/${model.name}/")
-        activity.model = model
         val server = train.postServer(model)
         Log.i("Server data", "$server")
-        if (server.port != null) {
-            activity.connectGrpc(modelDir, host, server.port)
-        } else {
-            Log.w("Flower server not available", server.status)
-        }
+        callback(model, modelDir, server)
     }
 }
