@@ -24,7 +24,7 @@ class FlowerClient constructor(val context: Context, modelDir: File) {
     private var localEpochs = 1
 
     val weights: Array<ByteBuffer>
-        get() = tlModel.parameters
+        get() = tlModel.model.parameters
 
     fun fit(weights: Array<ByteBuffer?>?, epochs: Int): Pair<Array<ByteBuffer>, Int> {
         localEpochs = epochs
@@ -34,13 +34,13 @@ class FlowerClient constructor(val context: Context, modelDir: File) {
         tlModel.enableTraining { epoch: Int, newLoss: Float -> setLastLoss(epoch, newLoss) }
         Log.d(TAG, "Training enabled. Local Epochs = $localEpochs")
         isTraining.block()
-        return Pair.create(this.weights, tlModel.size_Training)
+        return Pair.create(this.weights, tlModel.model.size_Training)
     }
 
     fun evaluate(weights: Array<ByteBuffer?>?): Pair<Pair<Float, Float>, Int> {
         tlModel.updateParameters(weights)
         tlModel.disableTraining()
-        return Pair.create(tlModel.calculateTestStatistics(), tlModel.size_Testing)
+        return Pair.create(tlModel.calculateTestStatistics(), tlModel.model.size_Testing)
     }
 
     fun setLastLoss(epoch: Int, newLoss: Float) {
