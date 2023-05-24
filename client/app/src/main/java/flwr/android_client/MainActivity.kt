@@ -13,23 +13,16 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import flwr.android_client.train.FlowerServiceRunnable
 import flwr.android_client.train.Train
-import io.grpc.ManagedChannel
-import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.PrintWriter
-import java.io.StringWriter
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
     private val scope = MainScope()
     lateinit var train: Train
-    lateinit var fc: FlowerClient
     private lateinit var ip: EditText
     private lateinit var port: EditText
     private lateinit var loadDataButton: Button
@@ -37,7 +30,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var trainButton: Button
     private lateinit var resultText: TextView
     private lateinit var device_id: EditText
-    private lateinit var channel: ManagedChannel
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -55,6 +47,23 @@ class MainActivity : AppCompatActivity() {
         val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.GERMANY)
         val time = dateFormat.format(Date())
         resultText.append("\n$time   $text")
+    }
+
+    suspend fun runWithStacktrace(call: suspend () -> Unit) {
+        try {
+            call()
+        } catch (err: Error) {
+            Log.e(TAG, Log.getStackTraceString(err))
+        }
+    }
+
+    suspend fun <T> runWithStacktraceOr(or: T, call: suspend () -> T): T {
+        return try {
+            call()
+        } catch (err: Error) {
+            Log.e(TAG, Log.getStackTraceString(err))
+            or
+        }
     }
 
     fun loadData(view: View) {
@@ -84,15 +93,9 @@ class MainActivity : AppCompatActivity() {
 
     suspend fun loadDataInBackground() {
         withContext(Dispatchers.IO) {
-            val result = try {
-                fc.loadData(device_id.text.toString().toInt())
+            val result = runWithStacktraceOr("Training dataset is loaded in memory.") {
+                train.flowerClient.loadData(device_id.text.toString().toInt())
                 "Training dataset is loaded in memory. Ready to train!"
-            } catch (e: Exception) {
-                val sw = StringWriter()
-                val pw = PrintWriter(sw)
-                e.printStackTrace(pw)
-                pw.flush()
-                "Training dataset is loaded in memory."
             }
             runOnUiThread {
                 setResultText(result)
@@ -116,10 +119,8 @@ class MainActivity : AppCompatActivity() {
         } else {
             val port = if (TextUtils.isEmpty(portStr)) 0 else portStr.toInt()
             scope.launch {
-                try {
+                runWithStacktrace {
                     connectInBackground(host, port)
-                } catch (err: Exception) {
-                    Log.e(TAG, "connectInBackground", err)
                 }
             }
             hideKeyboard()
@@ -129,29 +130,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     suspend fun connectInBackground(host: String, port: Int) {
-        val activity = this
+        train = Train(this, host, port)
         withContext(Dispatchers.IO) {
-            train = Train(host, port)
-            val model = train.getAdvertisedModel()
-            val modelDir = model.getModelDir(activity)
-            train.downloadModelFiles(modelDir)
-            val server = train.getServerInfo()
-            if (server.port != null) {
-                connectGrpc(modelDir, host, server.port)
-            } else {
-                Log.w("Flower server not available", server.status)
+            train.issueTrain()
+            runWithStacktrace {
+                train.prepare()
+                runOnUiThread {
+                    loadDataButton.isEnabled = true
+                    setResultText("Channel object created.")
+                }
             }
-        }
-    }
-
-    fun connectGrpc(modelDir: File, host: String, port: Int) {
-        fc = FlowerClient(this, modelDir)
-        channel =
-            ManagedChannelBuilder.forAddress(host, port).maxInboundMessageSize(10 * 1024 * 1024)
-                .usePlaintext().build()
-        runOnUiThread {
-            loadDataButton.isEnabled = true
-            setResultText("Channel object created.")
         }
     }
 
@@ -162,17 +150,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     suspend fun runGrpcInBackground() {
-        val activity = this
         withContext(Dispatchers.Default) {
-            val result = try {
-                FlowerServiceRunnable().run(FlowerServiceGrpc.newStub(channel), activity)
+            val result = runWithStacktraceOr("Failed to connect to the FL server \n") {
+                train.start {
+                    runOnUiThread {
+                        setResultText(it)
+                    }
+                }
                 "Connection to the FL server successful \n"
-            } catch (e: Exception) {
-                val sw = StringWriter()
-                val pw = PrintWriter(sw)
-                e.printStackTrace(pw)
-                pw.flush()
-                "Failed to connect to the FL server \n$sw"
             }
             runOnUiThread {
                 setResultText(result)

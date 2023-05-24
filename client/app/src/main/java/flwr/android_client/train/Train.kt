@@ -2,6 +2,10 @@ package flwr.android_client.train
 
 import android.content.Context
 import android.util.Log
+import flwr.android_client.FlowerClient
+import flwr.android_client.FlowerServiceGrpc
+import io.grpc.ManagedChannel
+import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.*
 import okhttp3.ResponseBody
 import retrofit2.Retrofit
@@ -10,11 +14,15 @@ import retrofit2.create
 import retrofit2.http.*
 import java.io.File
 
-class Train constructor(host: String, port: Int) {
+class Train constructor(val context: Context, val host: String, port: Int) {
+    lateinit var channel: ManagedChannel
     val url = generateUrl(host, port)
     val client = HttpClient(url)
     lateinit var model: TFLiteModelData
+    lateinit var modelDir: File
     lateinit var server: ServerData
+    lateinit var flowerClient: FlowerClient
+    lateinit var flowerServiceRunnable: FlowerServiceRunnable
 
     /**
      * Download advertised model information.
@@ -28,7 +36,7 @@ class Train constructor(host: String, port: Int) {
     /**
      * Download TFLite files to `"models/$path"`.
      */
-    suspend fun downloadModelFiles(modelDir: File) {
+    suspend fun downloadModelFiles() {
         val scope = CoroutineScope(Job())
         val downloadTasks = mutableListOf<Deferred<Unit>>()
         for (fileUrl in model.tflite_files) {
@@ -47,6 +55,30 @@ class Train constructor(host: String, port: Int) {
         server = client.postServer(model)
         Log.i("Server data", "$server")
         return server
+    }
+
+    suspend fun issueTrain() {
+        getAdvertisedModel()
+        modelDir = model.getModelDir(context)
+        downloadModelFiles()
+        getServerInfo()
+    }
+
+    @Throws
+    fun prepare() {
+        if (server.port == null) {
+            throw Error("Flower server port not available, status ${server.status}")
+        }
+        flowerClient = FlowerClient(context, modelDir)
+        channel = ManagedChannelBuilder.forAddress(host, server.port!!)
+            .maxInboundMessageSize(10 * 1024 * 1024)
+            .usePlaintext().build()
+        flowerServiceRunnable = FlowerServiceRunnable()
+    }
+
+    @Throws
+    fun start(callback: (String) -> Unit) {
+        flowerServiceRunnable.run(FlowerServiceGrpc.newStub(channel), this, callback)
     }
 }
 
