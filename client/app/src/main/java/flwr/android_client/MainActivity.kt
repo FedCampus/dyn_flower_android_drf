@@ -13,9 +13,9 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import flwr.android_client.train.Train
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import org.eu.fedcampus.train.Train
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
 import java.util.*
 

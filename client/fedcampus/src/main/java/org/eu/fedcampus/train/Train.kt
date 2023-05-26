@@ -1,4 +1,4 @@
-package flwr.android_client.train
+package org.eu.fedcampus.train
 
 import android.content.Context
 import android.util.Log
@@ -7,7 +7,6 @@ import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.*
 import okhttp3.ResponseBody
-import org.eu.fedcampus.train.FlowerClient
 import org.tensorflow.lite.examples.transfer.api.ExternalModelLoader
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
 import retrofit2.Retrofit

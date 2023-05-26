@@ -1,4 +1,4 @@
-package flwr.android_client.train
+package org.eu.fedcampus.train
 
 import android.util.Log
 import com.google.protobuf.ByteString
