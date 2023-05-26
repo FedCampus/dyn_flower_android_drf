@@ -7,38 +7,36 @@ import io.grpc.stub.StreamObserver
 import java.nio.ByteBuffer
 import java.util.concurrent.CountDownLatch
 
-class FlowerServiceRunnable {
-    private lateinit var requestObserver: StreamObserver<ClientMessage>
+class FlowerServiceRunnable
+/**
+ * Start communication with Flower server and training in the background.
+ */
+@Throws constructor(
+    asyncStub: FlowerServiceGrpc.FlowerServiceStub,
+    train: Train,
+    callback: (String) -> Unit
+) {
+    val finishLatch = CountDownLatch(1)
+    val requestObserver = asyncStub.join(object : StreamObserver<ServerMessage> {
+        override fun onNext(msg: ServerMessage) {
+            try {
+                handleMessage(msg, train, callback)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
 
-    @Throws
-    fun run(
-        asyncStub: FlowerServiceGrpc.FlowerServiceStub,
-        train: Train,
-        callback: (String) -> Unit
-    ) {
-        val finishLatch = CountDownLatch(1)
-        requestObserver = asyncStub.join(
-            object : StreamObserver<ServerMessage> {
-                override fun onNext(msg: ServerMessage) {
-                    try {
-                        handleMessage(msg, train, callback)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
+        override fun onError(t: Throwable) {
+            t.printStackTrace()
+            finishLatch.countDown()
+            Log.e(TAG, t.message!!)
+        }
 
-                override fun onError(t: Throwable) {
-                    t.printStackTrace()
-                    finishLatch.countDown()
-                    Log.e(TAG, t.message!!)
-                }
-
-                override fun onCompleted() {
-                    finishLatch.countDown()
-                    Log.d(TAG, "Done")
-                }
-            })
-    }
+        override fun onCompleted() {
+            finishLatch.countDown()
+            Log.d(TAG, "Done")
+        }
+    })
 
     @Throws
     private fun handleMessage(message: ServerMessage, train: Train, callback: (String) -> Unit) {

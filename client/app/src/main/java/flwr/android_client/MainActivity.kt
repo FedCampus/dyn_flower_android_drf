@@ -14,10 +14,8 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import flwr.android_client.train.Train
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
@@ -66,7 +64,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun loadData(view: View) {
+    fun loadData(@Suppress("UNUSED_PARAMETER") view: View) {
         if (TextUtils.isEmpty(device_id.text.toString())) {
             Toast.makeText(
                 this,
@@ -92,19 +90,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     suspend fun loadDataInBackground() {
-        withContext(Dispatchers.IO) {
-            val result = runWithStacktraceOr("Failed to load training dataset.") {
-                train.flowerClient.loadData(device_id.text.toString().toInt())
-                "Training dataset is loaded in memory. Ready to train!"
-            }
-            runOnUiThread {
-                setResultText(result)
-                trainButton.isEnabled = true
-            }
+        val result = runWithStacktraceOr("Failed to load training dataset.") {
+            train.flowerClient.loadData(device_id.text.toString().toInt())
+            "Training dataset is loaded in memory. Ready to train!"
+        }
+        runOnUiThread {
+            setResultText(result)
+            trainButton.isEnabled = true
         }
     }
 
-    fun connect(view: View) {
+    fun connect(@Suppress("UNUSED_PARAMETER") view: View) {
         val host = ip.text.toString()
         val portStr = port.text.toString()
         if (TextUtils.isEmpty(host) || TextUtils.isEmpty(portStr) || !Patterns.IP_ADDRESS.matcher(
@@ -131,38 +127,32 @@ class MainActivity : AppCompatActivity() {
 
     suspend fun connectInBackground(host: String, port: Int) {
         train = Train(this, host, port)
-        withContext(Dispatchers.IO) {
-            train.issueTrain()
-            runWithStacktrace {
-                train.prepare()
-                runOnUiThread {
-                    loadDataButton.isEnabled = true
-                    setResultText("Channel object created.")
-                }
-            }
+        train.issueTrain()
+        train.prepare()
+        runOnUiThread {
+            loadDataButton.isEnabled = true
+            setResultText("Prepared for training.")
         }
     }
 
-    fun runGrpc(view: View) {
+    fun runGrpc(@Suppress("UNUSED_PARAMETER") view: View) {
         scope.launch {
             runGrpcInBackground()
         }
     }
 
     suspend fun runGrpcInBackground() {
-        withContext(Dispatchers.Default) {
-            val result = runWithStacktraceOr("Failed to connect to the FL server \n") {
-                train.start {
-                    runOnUiThread {
-                        setResultText(it)
-                    }
+        val result = runWithStacktraceOr("Failed to connect to the FL server \n") {
+            train.start {
+                runOnUiThread {
+                    setResultText(it)
                 }
-                "Connection to the FL server successful \n"
             }
-            runOnUiThread {
-                setResultText(result)
-                trainButton.isEnabled = false
-            }
+            "Connection to the FL server successful \n"
+        }
+        runOnUiThread {
+            setResultText(result)
+            trainButton.isEnabled = false
         }
     }
 

@@ -18,15 +18,25 @@ class Train constructor(val context: Context, val host: String, port: Int) {
     lateinit var channel: ManagedChannel
     val url = generateUrl(host, port)
     val client = HttpClient(url)
+
+    /**
+     * Model to train with. Initialized after calling [getAdvertisedModel].
+     */
     lateinit var model: TFLiteModelData
     lateinit var modelDir: File
     lateinit var server: ServerData
     lateinit var flowerClient: FlowerClient
+
+    /**
+     * Communication and training instance. Initialized after calling [start].
+     */
     lateinit var flowerServiceRunnable: FlowerServiceRunnable
+
 
     /**
      * Download advertised model information.
      */
+    @Throws
     suspend fun getAdvertisedModel(): TFLiteModelData {
         model = client.getAdvertisedModel()
         Log.d("Model", "$model")
@@ -36,6 +46,7 @@ class Train constructor(val context: Context, val host: String, port: Int) {
     /**
      * Download TFLite files to `"models/$path"`.
      */
+    @Throws
     suspend fun downloadModelFiles() {
         val scope = CoroutineScope(Job())
         val downloadTasks = mutableListOf<Deferred<Unit>>()
@@ -51,34 +62,46 @@ class Train constructor(val context: Context, val host: String, port: Int) {
         Log.i("Downloaded TFLite model", "at models/${model.name}/")
     }
 
+    @Throws
     suspend fun getServerInfo(): ServerData {
         server = client.postServer(model)
         Log.i("Server data", "$server")
         return server
     }
 
+    /**
+     * Ask backend for advertised model, download its files, and ask backend for Flower server.
+     */
+    @Throws
     suspend fun issueTrain() {
-        getAdvertisedModel()
-        modelDir = model.getModelDir(context)
-        downloadModelFiles()
-        getServerInfo()
+        withContext(Dispatchers.IO) {
+            getAdvertisedModel()
+            modelDir = model.getModelDir(context)
+            downloadModelFiles()
+            getServerInfo()
+        }
     }
 
+    /**
+     * Load model into Flower client and establish connection to Flower server.
+     */
     @Throws
-    fun prepare() {
+    suspend fun prepare() {
         if (server.port == null) {
             throw Error("Flower server port not available, status ${server.status}")
         }
-        flowerClient = FlowerClient(context, modelDir)
-        channel = ManagedChannelBuilder.forAddress(host, server.port!!)
-            .maxInboundMessageSize(10 * 1024 * 1024)
-            .usePlaintext().build()
-        flowerServiceRunnable = FlowerServiceRunnable()
+        withContext(Dispatchers.IO) {
+            flowerClient = FlowerClient(context, modelDir)
+            channel = ManagedChannelBuilder.forAddress(host, server.port!!)
+                .maxInboundMessageSize(10 * 1024 * 1024)
+                .usePlaintext().build()
+        }
     }
 
     @Throws
     fun start(callback: (String) -> Unit) {
-        flowerServiceRunnable.run(FlowerServiceGrpc.newStub(channel), this, callback)
+        flowerServiceRunnable =
+            FlowerServiceRunnable(FlowerServiceGrpc.newStub(channel), this, callback)
     }
 }
 
@@ -96,6 +119,7 @@ class HttpClient constructor(url: String) {
     /**
      * Download advertised model information.
      */
+    @Throws
     suspend fun getAdvertisedModel(): TFLiteModelData {
         val getAdvertised = retrofit.create<GetAdvertised>()
         return getAdvertised.getAdvertised()
@@ -107,6 +131,7 @@ class HttpClient constructor(url: String) {
         suspend fun download(@Url url: String): ResponseBody
     }
 
+    @Throws
     suspend fun downloadFile(url: String, parentDir: File, fileName: String) {
         parentDir.mkdirs()
         val file = File(parentDir, fileName)
@@ -123,6 +148,7 @@ class HttpClient constructor(url: String) {
         suspend fun postServer(@Body body: PostServerData): ServerData
     }
 
+    @Throws
     suspend fun postServer(model: TFLiteModelData): ServerData {
         val body = PostServerData(model.id)
         val postServer = retrofit.create<PostServer>()
@@ -137,6 +163,7 @@ data class TFLiteModelData(
     val n_layers: Long,
     val tflite_files: List<String>
 ) {
+    @Throws
     fun getModelDir(context: Context): File {
         return context.getExternalFilesDir("models/$name/")!!
     }

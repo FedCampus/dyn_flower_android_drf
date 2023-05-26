@@ -7,6 +7,8 @@ import android.os.ConditionVariable
 import android.util.Log
 import android.util.Pair
 import androidx.lifecycle.MutableLiveData
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.tensorflow.lite.examples.transfer.api.ExternalModelLoader
 import java.io.BufferedReader
 import java.io.File
@@ -14,6 +16,9 @@ import java.io.InputStreamReader
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutionException
 
+/**
+ * Construction of this class requires disk read.
+ */
 class FlowerClient constructor(val context: Context, modelDir: File) {
     private val isTraining = ConditionVariable()
     private val tlModel = run {
@@ -52,14 +57,19 @@ class FlowerClient constructor(val context: Context, modelDir: File) {
         }
     }
 
-    private fun readAssetLines(fileName: String, call: (Int, String) -> Unit) {
-        BufferedReader(InputStreamReader(context.assets.open(fileName))).useLines {
-            it.forEachIndexed(call)
+    private suspend fun readAssetLines(fileName: String, call: (Int, String) -> Unit) {
+        withContext(Dispatchers.IO) {
+            BufferedReader(InputStreamReader(context.assets.open(fileName))).useLines {
+                it.forEachIndexed(call)
+            }
         }
     }
 
+    /**
+     * Load training data from disk.
+     */
     @Throws
-    fun loadData(device_id: Int) {
+    suspend fun loadData(device_id: Int) {
         readAssetLines("data/partition_${device_id - 1}_train.txt") { index, line ->
             if (index % 500 == 499) {
                 Log.i(TAG, index.toString() + "th training image loaded")
