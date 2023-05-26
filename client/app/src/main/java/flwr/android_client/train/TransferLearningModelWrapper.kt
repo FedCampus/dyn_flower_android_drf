@@ -1,8 +1,7 @@
-package flwr.android_client
+package flwr.android_client.train
 
 import android.os.ConditionVariable
 import android.util.Pair
-import org.tensorflow.lite.examples.transfer.api.ModelLoader
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel.LossConsumer
 import java.io.Closeable
@@ -17,21 +16,7 @@ import java.util.concurrent.Future
  * This wrapper allows to run training continuously, using start/stop API, in contrast to
  * run-once API of [TransferLearningModel].
  */
-class TransferLearningModelWrapper internal constructor(modelLoader: ModelLoader) : Closeable {
-    val model = TransferLearningModel(
-        modelLoader, listOf(
-            "cat",
-            "dog",
-            "truck",
-            "bird",
-            "airplane",
-            "ship",
-            "frog",
-            "horse",
-            "deer",
-            "automobile"
-        )
-    )
+class TransferLearningModelWrapper constructor(val model: TransferLearningModel) : Closeable {
     private val shouldTrain = ConditionVariable()
 
     @Volatile
@@ -89,13 +74,5 @@ class TransferLearningModelWrapper internal constructor(modelLoader: ModelLoader
      */
     override fun close() {
         model.close()
-    }
-
-    companion object {
-        /**
-         * CIFAR10 image size. This cannot be changed as the TFLite model's input layer expects
-         * a 32x32x3 input.
-         */
-        const val IMAGE_SIZE = 32
     }
 }

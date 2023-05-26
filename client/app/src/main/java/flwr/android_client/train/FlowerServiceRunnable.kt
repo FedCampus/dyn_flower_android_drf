@@ -87,9 +87,11 @@ class FlowerServiceRunnable
         requestObserver.onNext(clientMessage)
         callback("Response sent to the server")
     }
-}
 
-private const val TAG = "Flower Service Runnable"
+    companion object {
+        private const val TAG = "Flower Service Runnable"
+    }
+}
 
 fun weightsAsProto(weights: Array<ByteBuffer>): ClientMessage {
     val layers: MutableList<ByteString> = ArrayList()

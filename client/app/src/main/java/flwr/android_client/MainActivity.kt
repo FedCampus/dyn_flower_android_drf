@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import flwr.android_client.train.Train
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
@@ -91,7 +92,7 @@ class MainActivity : AppCompatActivity() {
 
     suspend fun loadDataInBackground() {
         val result = runWithStacktraceOr("Failed to load training dataset.") {
-            train.flowerClient.loadData(device_id.text.toString().toInt())
+            loadData(this, train.flowerClient.tlModel, device_id.text.toString().toInt())
             "Training dataset is loaded in memory. Ready to train!"
         }
         runOnUiThread {
@@ -127,8 +128,21 @@ class MainActivity : AppCompatActivity() {
 
     suspend fun connectInBackground(host: String, port: Int) {
         train = Train(this, host, port)
-        train.issueTrain()
-        train.prepare()
+        val modelLoader = train.issueTrain()
+        val classes = listOf(
+            "cat",
+            "dog",
+            "truck",
+            "bird",
+            "airplane",
+            "ship",
+            "frog",
+            "horse",
+            "deer",
+            "automobile"
+        )
+        val model = TransferLearningModel(modelLoader, classes)
+        train.prepare(model)
         runOnUiThread {
             loadDataButton.isEnabled = true
             setResultText("Prepared for training.")

@@ -2,12 +2,13 @@ package flwr.android_client.train
 
 import android.content.Context
 import android.util.Log
-import flwr.android_client.FlowerClient
 import flwr.android_client.FlowerServiceGrpc
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.*
 import okhttp3.ResponseBody
+import org.tensorflow.lite.examples.transfer.api.ExternalModelLoader
+import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.create
@@ -71,33 +72,38 @@ class Train constructor(val context: Context, val host: String, port: Int) {
 
     /**
      * Ask backend for advertised model, download its files, and ask backend for Flower server.
+     * @return Model loader.
      */
     @Throws
-    suspend fun issueTrain() {
+    suspend fun issueTrain(): ExternalModelLoader {
         withContext(Dispatchers.IO) {
             getAdvertisedModel()
             modelDir = model.getModelDir(context)
             downloadModelFiles()
             getServerInfo()
         }
+        return ExternalModelLoader(modelDir)
     }
 
     /**
-     * Load model into Flower client and establish connection to Flower server.
+     * Load [model] into Flower client and establish connection to Flower server.
      */
     @Throws
-    suspend fun prepare() {
+    suspend fun prepare(model: TransferLearningModel) {
         if (server.port == null) {
             throw Error("Flower server port not available, status ${server.status}")
         }
         withContext(Dispatchers.IO) {
-            flowerClient = FlowerClient(context, modelDir)
+            flowerClient = FlowerClient(model)
             channel = ManagedChannelBuilder.forAddress(host, server.port!!)
                 .maxInboundMessageSize(10 * 1024 * 1024)
                 .usePlaintext().build()
         }
     }
 
+    /**
+     * Only call this after loading training data into `flowerClient.tlModel`.
+     */
     @Throws
     fun start(callback: (String) -> Unit) {
         flowerServiceRunnable =
