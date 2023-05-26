@@ -45,7 +45,7 @@ dependencies {
     // different TFLite distributions (e.g. with or without Flex).
     implementation 'org.tensorflow:tensorflow-lite:2.12.0'
     // This dependency adds the necessary TF op support.
-    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:0.0.0-nightly-SNAPSHOT'
+    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.12.0'
 
-    androidTestImplementation 'org.tensorflow:tensorflow-lite:0.0.0-nightly-SNAPSHOT'
+    androidTestImplementation 'org.tensorflow:tensorflow-lite:2.12.0'
 }
