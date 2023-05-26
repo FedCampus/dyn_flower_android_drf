@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import flwr.android_client.train.TransferLearningModelWrapper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -14,7 +15,7 @@ import java.util.concurrent.ExecutionException
 suspend fun readAssetLines(context: Context, fileName: String, call: (Int, String) -> Unit) {
     withContext(Dispatchers.IO) {
         BufferedReader(InputStreamReader(context.assets.open(fileName))).useLines {
-            it.forEachIndexed(call)
+            it.forEachIndexed { i, l -> launch { call(i, l) } }
         }
     }
 }
