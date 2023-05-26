@@ -4,6 +4,7 @@ import android.os.ConditionVariable
 import android.util.Log
 import android.util.Pair
 import androidx.lifecycle.MutableLiveData
+import org.eu.fedcampus.train.TransferLearningModelWrapper
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
 import java.nio.ByteBuffer
 
