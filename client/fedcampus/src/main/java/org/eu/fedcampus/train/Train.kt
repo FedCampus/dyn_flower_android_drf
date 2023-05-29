@@ -52,9 +52,7 @@ class Train constructor(
     }
 
     suspend fun modelDownloaded(): Boolean {
-        return withContext(Dispatchers.IO) {
-            modelDao?.findById(model.id)?.equals(model) ?: false
-        }
+        return modelDao?.findById(model.id)?.equals(model) ?: false
     }
 
     /**

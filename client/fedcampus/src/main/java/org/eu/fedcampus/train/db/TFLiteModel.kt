@@ -37,17 +37,17 @@ class TFLiteFilesConverter {
 @Dao
 interface ModelDao {
     @Query("SELECT * FROM model")
-    fun getAll(): List<Model>
+    suspend fun getAll(): List<Model>
 
     @Query("SELECT * FROM model WHERE id = :id")
-    fun findById(id: Long): Model?
+    suspend fun findById(id: Long): Model?
 
     @Query("SELECT * FROM model WHERE name LIKE :name")
-    fun findByName(name: String): List<Model>
+    suspend fun findByName(name: String): List<Model>
 
     @Upsert
-    fun upsertAll(vararg models: Model)
+    suspend fun upsertAll(vararg models: Model)
 
     @Delete
-    fun deleteAll(vararg models: Model)
+    suspend fun deleteAll(vararg models: Model)
 }
