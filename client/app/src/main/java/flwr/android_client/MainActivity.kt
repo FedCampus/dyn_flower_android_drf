@@ -132,7 +132,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     suspend fun connectInBackground(host: String, port: Int) {
-        train = Train(this, host, port)
+        train = Train(this, host, port, db.modelDao())
         val modelLoader = train.issueTrain()
         val classes = listOf(
             "cat",

@@ -39,8 +39,8 @@ interface ModelDao {
     @Query("SELECT * FROM model")
     fun getAll(): List<Model>
 
-    @Query("SELECT * FROM model WHERE id IN (:ids)")
-    fun findByIds(ids: LongArray): List<Model>
+    @Query("SELECT * FROM model WHERE id = :id")
+    fun findById(id: Long): Model?
 
     @Query("SELECT * FROM model WHERE name LIKE :name")
     fun findByName(name: String): List<Model>
