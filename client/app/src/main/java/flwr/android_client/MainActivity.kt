@@ -13,9 +13,11 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.room.Room
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.eu.fedcampus.train.Train
+import org.eu.fedcampus.train.db.Db
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
 import java.util.*
 
@@ -29,8 +31,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var trainButton: Button
     private lateinit var resultText: TextView
     private lateinit var device_id: EditText
+    lateinit var db: Db
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        db = Room.databaseBuilder(this, Db::class.java, "model-db").build()
         setContentView(R.layout.activity_main)
         resultText = findViewById(R.id.grpc_response_text)
         resultText.movementMethod = ScrollingMovementMethod()
@@ -180,4 +185,4 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-private const val TAG = "Flower"
+private const val TAG = "MainActivity"
