@@ -1,6 +1,8 @@
-apply plugin: 'com.google.protobuf'
-apply plugin: 'com.android.application'
-apply plugin: 'org.jetbrains.kotlin.android'
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'kotlin-kapt'
+}
 
 android {
     compileSdkVersion 33
@@ -52,6 +54,9 @@ dependencies {
     // Room.
     def room_version = "2.5.1"
     implementation("androidx.room:room-runtime:$room_version")
+    kapt("androidx.room:room-compiler:$room_version")
+    implementation("androidx.room:room-ktx:$room_version")
+    testImplementation("androidx.room:room-testing:$room_version")
 
     // Local dependencies.
     implementation project(path: ':transfer_api')

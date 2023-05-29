@@ -17,7 +17,6 @@ import androidx.room.Room
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.eu.fedcampus.train.Train
-import org.eu.fedcampus.train.db.Db
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
 import java.util.*
 
