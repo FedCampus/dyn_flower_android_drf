@@ -44,6 +44,16 @@ class MainActivity : AppCompatActivity() {
         loadDataButton = findViewById(R.id.load_data)
         connectButton = findViewById(R.id.connect)
         trainButton = findViewById(R.id.trainFederated)
+        scope.launch { restoreInput() }
+    }
+
+    suspend fun restoreInput() {
+        val input = db.inputDao().get() ?: return
+        runOnUiThread {
+            device_id.text.append(input.device_id)
+            ip.text.append(input.ip)
+            port.text.append(input.port)
+        }
     }
 
     fun setResultText(text: String) {
@@ -70,15 +80,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun loadData(@Suppress("UNUSED_PARAMETER") view: View) {
-        if (TextUtils.isEmpty(device_id.text.toString())) {
-            Toast.makeText(
-                this,
-                "Please enter a client partition ID between 1 and 10 (inclusive)",
-                Toast.LENGTH_LONG
-            ).show()
-        } else if (device_id.text.toString().toInt() > 10 || device_id.text.toString()
-                .toInt() < 1
-        ) {
+        if (device_id.text.isEmpty() || !(1..10).contains(device_id.text.toString().toInt())) {
             Toast.makeText(
                 this,
                 "Please enter a client partition ID between 1 and 10 (inclusive)",
@@ -87,9 +89,13 @@ class MainActivity : AppCompatActivity() {
         } else {
             hideKeyboard()
             setResultText("Loading the local training dataset in memory. It will take several seconds.")
+            device_id.isEnabled = false
             loadDataButton.isEnabled = false
             scope.launch {
                 loadDataInBackground()
+            }
+            scope.launch {
+                db.inputDao().upsertAll(inputFromEditText(device_id, ip, port))
             }
         }
     }
@@ -125,6 +131,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             hideKeyboard()
+            ip.isEnabled = false
+            this.port.isEnabled = false
             connectButton.isEnabled = false
             setResultText("Creating channel object.")
         }

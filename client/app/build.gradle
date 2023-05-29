@@ -14,6 +14,13 @@ android {
         targetSdkVersion 33
         versionCode 1
         versionName "1.0"
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                // Tell Room where to export schema so it can generate auto-migrations.
+                arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
+            }
+        }
     }
     buildTypes {
         debug { minifyEnabled false }
