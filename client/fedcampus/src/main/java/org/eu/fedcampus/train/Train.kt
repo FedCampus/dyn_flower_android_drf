@@ -163,18 +163,6 @@ class HttpClient constructor(url: String) {
 
 }
 
-data class TFLiteModelData(
-    val id: Long,
-    val name: String,
-    val n_layers: Long,
-    val tflite_files: List<String>
-) {
-    @Throws
-    fun getModelDir(context: Context): File {
-        return context.getExternalFilesDir("models/$name/")!!
-    }
-}
-
 data class ServerData(val status: String, val port: Int?)
 
 data class PostServerData(val id: Long)
