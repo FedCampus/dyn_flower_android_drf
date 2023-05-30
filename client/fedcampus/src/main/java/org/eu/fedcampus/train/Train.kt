@@ -7,6 +7,8 @@ import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.*
 import okhttp3.ResponseBody
+import org.eu.fedcampus.train.db.Model
+import org.eu.fedcampus.train.db.ModelDao
 import org.tensorflow.lite.examples.transfer.api.ExternalModelLoader
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
 import retrofit2.Retrofit
@@ -15,7 +17,12 @@ import retrofit2.create
 import retrofit2.http.*
 import java.io.File
 
-class Train constructor(val context: Context, val host: String, port: Int) {
+class Train constructor(
+    val context: Context,
+    val host: String,
+    port: Int,
+    val modelDao: ModelDao? = null
+) {
     lateinit var channel: ManagedChannel
     val url = generateUrl(host, port)
     val client = HttpClient(url)
@@ -23,7 +30,7 @@ class Train constructor(val context: Context, val host: String, port: Int) {
     /**
      * Model to train with. Initialized after calling [getAdvertisedModel].
      */
-    lateinit var model: TFLiteModelData
+    lateinit var model: Model
     lateinit var modelDir: File
     lateinit var server: ServerData
     lateinit var flowerClient: FlowerClient
@@ -38,17 +45,26 @@ class Train constructor(val context: Context, val host: String, port: Int) {
      * Download advertised model information.
      */
     @Throws
-    suspend fun getAdvertisedModel(): TFLiteModelData {
+    suspend fun getAdvertisedModel(): Model {
         model = client.getAdvertisedModel()
         Log.d("Model", "$model")
         return model
     }
 
+    suspend fun modelDownloaded(): Boolean {
+        return modelDao?.findById(model.id)?.equals(model) ?: false
+    }
+
     /**
-     * Download TFLite files to `"models/$path"`.
+     * Download TFLite files to `"models/$path"` if they have not been saved to DB.
      */
     @Throws
     suspend fun downloadModelFiles() {
+        if (modelDownloaded()) {
+            // The model is already in the DB
+            Log.i("downloadModelFiles", "skipping already downloaded model ${model.name}")
+            return
+        }
         val scope = CoroutineScope(Job())
         val downloadTasks = mutableListOf<Deferred<Unit>>()
         for (fileUrl in model.tflite_files) {
@@ -61,6 +77,7 @@ class Train constructor(val context: Context, val host: String, port: Int) {
         }
         downloadTasks.awaitAll()
         Log.i("Downloaded TFLite model", "at models/${model.name}/")
+        modelDao?.upsertAll(model)
     }
 
     @Throws
@@ -119,14 +136,14 @@ class HttpClient constructor(url: String) {
 
     interface GetAdvertised {
         @GET("train/get_advertised")
-        suspend fun getAdvertised(): TFLiteModelData
+        suspend fun getAdvertised(): Model
     }
 
     /**
      * Download advertised model information.
      */
     @Throws
-    suspend fun getAdvertisedModel(): TFLiteModelData {
+    suspend fun getAdvertisedModel(): Model {
         val getAdvertised = retrofit.create<GetAdvertised>()
         return getAdvertised.getAdvertised()
     }
@@ -155,24 +172,12 @@ class HttpClient constructor(url: String) {
     }
 
     @Throws
-    suspend fun postServer(model: TFLiteModelData): ServerData {
+    suspend fun postServer(model: Model): ServerData {
         val body = PostServerData(model.id)
         val postServer = retrofit.create<PostServer>()
         return postServer.postServer(body)
     }
 
-}
-
-data class TFLiteModelData(
-    val id: Long,
-    val name: String,
-    val n_layers: Long,
-    val tflite_files: List<String>
-) {
-    @Throws
-    fun getModelDir(context: Context): File {
-        return context.getExternalFilesDir("models/$name/")!!
-    }
 }
 
 data class ServerData(val status: String, val port: Int?)
