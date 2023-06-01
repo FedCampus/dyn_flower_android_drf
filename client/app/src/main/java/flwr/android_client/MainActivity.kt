@@ -140,7 +140,9 @@ class MainActivity : AppCompatActivity() {
 
     @Throws
     suspend fun connectInBackground(host: String, port: Int) {
-        train = Train(this, host, port, db.modelDao())
+        val backendUrl = "http://$host:$port"
+        Log.i(TAG, "Backend URL: $backendUrl")
+        train = Train(this, backendUrl, db.modelDao())
         val modelLoader = train.prepareModelLoader()
         val classes = listOf(
             "cat",

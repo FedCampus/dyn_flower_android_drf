@@ -19,13 +19,11 @@ import java.io.File
 
 class Train constructor(
     val context: Context,
-    host: String,
-    port: Int,
+    backendUrl: String,
     val modelDao: ModelDao? = null
 ) {
     lateinit var channel: ManagedChannel
-    val url = generateUrl(host, port)
-    val client = HttpClient(url)
+    val client = HttpClient(backendUrl)
 
     /**
      * Model to train with. Initialized after calling [getAdvertisedModel].
@@ -183,10 +181,3 @@ class HttpClient constructor(url: String) {
 data class ServerData(val status: String, val port: Int?)
 
 data class PostServerData(val id: Long)
-
-fun generateUrl(host: String, port: Int): String {
-    // TODO: HTTPS
-    val url = "http://$host:$port"
-    Log.i("URL", url)
-    return url
-}
