@@ -44,6 +44,8 @@ def monitor_db_conn(db_conn: Connection):
 def model_params(model: TFLiteModel):
     try:
         params: ModelParams = model.params.last()  # type: ignore
+        if params is None:
+            return
         # TODO: Support not just float 32.
         tensors = [array(param, dtype=single).tobytes() for param in params.params]
         return Parameters(tensors, tensor_type="numpy.ndarray")
