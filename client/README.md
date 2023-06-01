@@ -2,7 +2,7 @@
 
 ## Set up
 
-For the first time you build, uncomment the last 33 lines in `client/app/build.gradle` to download the models (unnecessary) and the data (necessary).
+Download the training and testing data from <https://docs.djangoproject.com/en/4.2/howto/deployment/> and extract them to `app/src/main/assets/data`.
 
 ## Run the demo
 
