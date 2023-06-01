@@ -138,9 +138,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @Throws
     suspend fun connectInBackground(host: String, port: Int) {
         train = Train(this, host, port, db.modelDao())
-        val modelLoader = train.issueTrain()
+        val modelLoader = train.prepareModelLoader()
         val classes = listOf(
             "cat",
             "dog",
@@ -154,7 +155,11 @@ class MainActivity : AppCompatActivity() {
             "automobile"
         )
         val model = TransferLearningModel(modelLoader, classes)
-        train.prepare(model)
+        val serverData = train.getServerInfo()
+        if (serverData.port == null) {
+            throw Error("Flower server port not available, status ${serverData.status}")
+        }
+        train.prepare(model, "dns:///$host:${serverData.port}", false)
         runOnUiThread {
             loadDataButton.isEnabled = true
             setResultText("Prepared for training.")

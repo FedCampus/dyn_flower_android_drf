@@ -19,7 +19,7 @@ import java.io.File
 
 class Train constructor(
     val context: Context,
-    val host: String,
+    host: String,
     port: Int,
     val modelDao: ModelDao? = null
 ) {
@@ -32,7 +32,6 @@ class Train constructor(
      */
     lateinit var model: Model
     lateinit var modelDir: File
-    lateinit var server: ServerData
     lateinit var flowerClient: FlowerClient
 
     /**
@@ -82,9 +81,9 @@ class Train constructor(
 
     @Throws
     suspend fun getServerInfo(): ServerData {
-        server = client.postServer(model)
-        Log.i("Server data", "$server")
-        return server
+        val serverData = client.postServer(model)
+        Log.i("Server data", "$serverData")
+        return serverData
     }
 
     /**
@@ -92,12 +91,11 @@ class Train constructor(
      * @return Model loader.
      */
     @Throws
-    suspend fun issueTrain(): ExternalModelLoader {
+    suspend fun prepareModelLoader(): ExternalModelLoader {
         withContext(Dispatchers.IO) {
             getAdvertisedModel()
             modelDir = model.getModelDir(context)
             downloadModelFiles()
-            getServerInfo()
         }
         return ExternalModelLoader(modelDir)
     }
@@ -106,15 +104,15 @@ class Train constructor(
      * Load [model] into Flower client and establish connection to Flower server.
      */
     @Throws
-    suspend fun prepare(model: TransferLearningModel) {
-        if (server.port == null) {
-            throw Error("Flower server port not available, status ${server.status}")
+    suspend fun prepare(model: TransferLearningModel, address: String, secure: Boolean) {
+        flowerClient = FlowerClient(model)
+        val channelBuilder =
+            ManagedChannelBuilder.forTarget(address).maxInboundMessageSize(HUNDRED_MEBIBYTE)
+        if (!secure) {
+            channelBuilder.usePlaintext()
         }
         withContext(Dispatchers.IO) {
-            flowerClient = FlowerClient(model)
-            channel = ManagedChannelBuilder.forAddress(host, server.port!!)
-                .maxInboundMessageSize(10 * 1024 * 1024)
-                .usePlaintext().build()
+            channel = channelBuilder.build()
         }
     }
 
@@ -127,6 +125,8 @@ class Train constructor(
             FlowerServiceRunnable(FlowerServiceGrpc.newStub(channel), this, callback)
     }
 }
+
+const val HUNDRED_MEBIBYTE = 100 * 1024 * 1024
 
 class HttpClient constructor(url: String) {
     private val retrofit = Retrofit.Builder()
