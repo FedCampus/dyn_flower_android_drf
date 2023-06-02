@@ -2,6 +2,12 @@
 
 ## Set up
 
+### Install the required dependencies
+
+```sh
+python3 -m pip install -r requirements.txt
+```
+
 ### Run migrations
 
 ```sh
