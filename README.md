@@ -6,6 +6,8 @@ Please see `backend/README.md` for information on how to set up the backend serv
 
 ---
 
+Note: you don't need to follow the instructions below.
+
 Original README from Flower Android example:
 
 # Flower Android Example (TensorFlowLite)
