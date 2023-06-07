@@ -1,18 +1,18 @@
 from logging import getLogger
 from multiprocessing import Pipe, Process
-from multiprocessing.connection import Connection
 from threading import Thread
 
 from flwr.common import Parameters
 from numpy import array, single
+from telemetry.models import TrainingSession
 from train.models import ModelParams, TFLiteModel
 from train.run import PORT, flwr_server
 
 logger = getLogger(__name__)
 
 
-def monitor_db_conn_once(db_conn: Connection):
-    kind, msg = db_conn.recv()
+def monitor_db_conn_once(server: "Server"):
+    kind, msg = server.db_conn.recv()
     if kind == "done":
         logger.info("DB monitor thread shutting down")
         return True
@@ -20,24 +20,23 @@ def monitor_db_conn_once(db_conn: Connection):
         if not isinstance(msg, list):
             logger.error(f"Wrong parameters {msg} for `save_params`.")
             return False
-        if task is None:
-            logger.error(f"Received `save_params` while no running models is found.")
-            return False
-        to_save = ModelParams(params=msg, tflite_model=task.model)
+        to_save = ModelParams(params=msg, tflite_model=server.model)
         try:
             to_save.save()
+            server.update_session_end_time()
         except RuntimeError as err:
             logger.error(err)
     return False
 
 
-def monitor_db_conn(db_conn: Connection):
-    while not db_conn.closed:
+def monitor_db_conn(server: "Server"):
+    while not server.db_conn.closed:
         try:
-            if monitor_db_conn_once(db_conn):
+            if monitor_db_conn_once(server):
                 break
         except RuntimeError as err:
             logger.error(err)
+    server.update_session_end_time()
     logger.warning("DB monitor thread exiting.")
 
 
@@ -62,14 +61,19 @@ class Server:
     def __init__(self, model: TFLiteModel) -> None:
         self.model = model
         params = model_params(model)
-        db_conn, db_conn1 = Pipe()
+        db_conn, self.db_conn = Pipe()
+        self.session = TrainingSession(tflite_model=model)
         self.process = Process(target=flwr_server, args=(db_conn, params))
         self.process.start()
-        self.thread = Thread(target=monitor_db_conn, args=(db_conn1,))
+        self.thread = Thread(target=monitor_db_conn, args=(self,))
         self.thread.start()
         self.timeout = Thread(target=Process.join, args=(self.process, TWELVE_HOURS))
         self.timeout.start()
+        self.update_session_end_time()
         logger.warning(f"Started flower server for model {model}")
+
+    def update_session_end_time(self):
+        self.session.save()
 
 
 task: Server | None = None
