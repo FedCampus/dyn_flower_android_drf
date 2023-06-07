@@ -2,8 +2,15 @@ package org.eu.fedcampus.train
 
 import android.util.Log
 import com.google.protobuf.ByteString
-import flwr.android_client.*
+import flwr.android_client.ClientMessage
+import flwr.android_client.FlowerServiceGrpc
+import flwr.android_client.Parameters
+import flwr.android_client.Scalar
+import flwr.android_client.ServerMessage
 import io.grpc.stub.StreamObserver
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.util.concurrent.CountDownLatch
 
@@ -38,6 +45,7 @@ class FlowerServiceRunnable
         }
     })
 
+    @OptIn(DelicateCoroutinesApi::class)
     @Throws
     private fun handleMessage(message: ServerMessage, train: Train, callback: (String) -> Unit) {
         val weights: Array<ByteBuffer>
@@ -49,6 +57,7 @@ class FlowerServiceRunnable
         } else if (message.hasFitIns()) {
             Log.d(TAG, "Handling FitIns")
             callback("Handling Fit request from the server.")
+            val start = if (train.telemetry) System.currentTimeMillis() else null
             val layers = message.fitIns.parameters.tensorsList
             val nLayers = layers.size
             assert(nLayers.toLong() == train.model.n_layers)
@@ -63,6 +72,10 @@ class FlowerServiceRunnable
                 newWeights[i] = ByteBuffer.wrap(bytes)
             }
             val outputs = train.flowerClient.fit(newWeights, local_epochs)
+            if (train.telemetry) {
+                val end = System.currentTimeMillis()
+                GlobalScope.launch { train.fitInsTelemetry(start!!, end) }
+            }
             fitResAsProto(outputs.first, outputs.second)
         } else if (message.hasEvaluateIns()) {
             Log.d(TAG, "Handling EvaluateIns")

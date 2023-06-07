@@ -1,7 +1,9 @@
 package flwr.android_client
 
+import android.annotation.SuppressLint
 import android.icu.text.SimpleDateFormat
 import android.os.Bundle
+import android.provider.Settings
 import android.text.TextUtils
 import android.text.method.ScrollingMovementMethod
 import android.util.Log
@@ -138,11 +140,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("HardwareIds")
     @Throws
     suspend fun connectInBackground(host: String, port: Int) {
         val backendUrl = "http://$host:$port"
         Log.i(TAG, "Backend URL: $backendUrl")
         train = Train(this, backendUrl, db.modelDao())
+        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)!!
+        train.enableTelemetry(deviceId)
+
         val modelLoader = train.prepareModelLoader()
         val classes = listOf(
             "cat",
