@@ -22,8 +22,11 @@ class Train constructor(
     backendUrl: String,
     val modelDao: ModelDao? = null
 ) {
+    var telemetry = false
+    lateinit var deviceId: String
     lateinit var channel: ManagedChannel
     val client = HttpClient(backendUrl)
+
 
     /**
      * Model to train with. Initialized after calling [getAdvertisedModel].
@@ -37,6 +40,11 @@ class Train constructor(
      */
     lateinit var flowerServiceRunnable: FlowerServiceRunnable
 
+
+    fun enableTelemetry(id: String) {
+        deviceId = id
+        telemetry = true
+    }
 
     /**
      * Download advertised model information.
@@ -122,6 +130,12 @@ class Train constructor(
         flowerServiceRunnable =
             FlowerServiceRunnable(FlowerServiceGrpc.newStub(channel), this, callback)
     }
+
+    suspend fun fitInsTelemetry(start: Long, end: Long) {
+        assert(telemetry)
+        client.fitInsTelemetry(deviceId, start, end)
+        Log.i("Telemetry", "Sent fit instruction telemetry")
+    }
 }
 
 const val HUNDRED_MEBIBYTE = 100 * 1024 * 1024
@@ -176,8 +190,21 @@ class HttpClient constructor(url: String) {
         return postServer.postServer(body)
     }
 
+    interface FitInsTelemetry {
+        @POST("telemetry/fit_ins")
+        suspend fun fitInsTelemetry(@Body body: FitInsTelemetryData)
+    }
+
+    @Throws
+    suspend fun fitInsTelemetry(id: String, start: Long, end: Long) {
+        val body = FitInsTelemetryData(id, start, end)
+        val fitInsTelemetry = retrofit.create<FitInsTelemetry>()
+        fitInsTelemetry.fitInsTelemetry(body)
+    }
 }
 
 data class ServerData(val status: String, val port: Int?)
 
 data class PostServerData(val id: Long)
+
+data class FitInsTelemetryData(val id: String, val start: Long, val end: Long)
