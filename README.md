@@ -4,6 +4,8 @@ Dynamic Flower model use on Android by wrapping Flower with Django REST Framewor
 
 Please see `backend/README.md` for information on how to set up the backend server, see `client/README.md` to set up the client.
 
+Please see `tflite_converter/README.md` for information on how to convert models to `.tflite` files.
+
 ---
 
 Note: you don't need to follow the instructions below.
