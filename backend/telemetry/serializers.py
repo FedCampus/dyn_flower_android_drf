@@ -13,7 +13,7 @@ class TimestampMillis(serializers.Field):
 
 
 class FitInsTelemetryDataSerializer(serializers.Serializer):
-    device_id = serializers.CharField()
+    device_id = serializers.IntegerField()
     session_id = serializers.IntegerField()
     start = TimestampMillis()
     end = TimestampMillis()

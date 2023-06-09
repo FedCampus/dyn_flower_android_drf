@@ -20,7 +20,7 @@ class TrainingSession(models.Model):
 # Always change together with Android `Train.FitInsTelemetryData`.
 class FitInsTelemetryData(models.Model):
     id: int  # Help static analysis.
-    device_id = models.CharField(max_length=100, null=False, editable=False)
+    device_id = models.IntegerField(null=False, editable=False)
     session_id = models.ForeignKey(
         TrainingSession, null=False, on_delete=models.CASCADE, related_name="fit_ins"
     )

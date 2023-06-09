@@ -146,7 +146,7 @@ class MainActivity : AppCompatActivity() {
         val backendUrl = "http://$host:$port"
         Log.i(TAG, "Backend URL: $backendUrl")
         train = Train(this, backendUrl, db.modelDao())
-        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)!!
+        val deviceId = Settings.Secure.getLong(contentResolver, Settings.Secure.ANDROID_ID)
         train.enableTelemetry(deviceId)
 
         val modelLoader = train.prepareModelLoader()

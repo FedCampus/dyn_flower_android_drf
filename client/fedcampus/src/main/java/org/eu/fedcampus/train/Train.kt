@@ -16,6 +16,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.create
 import retrofit2.http.*
 import java.io.File
+import kotlin.properties.Delegates
 
 class Train constructor(
     val context: Context,
@@ -25,7 +26,7 @@ class Train constructor(
     var sessionId: Int? = null
     var telemetry = false
         private set
-    lateinit var deviceId: String
+    var deviceId by Delegates.notNull<Long>()
         private set
     lateinit var channel: ManagedChannel
     val client = HttpClient(backendUrl)
@@ -44,7 +45,7 @@ class Train constructor(
     lateinit var flowerServiceRunnable: FlowerServiceRunnable
 
 
-    fun enableTelemetry(id: String) {
+    fun enableTelemetry(id: Long) {
         deviceId = id
         telemetry = true
     }
@@ -216,7 +217,7 @@ data class PostServerData(val id: Long)
 
 // Always change together with Python `telemetry.models.FitInsTelemetryData`.
 data class FitInsTelemetryData(
-    val device_id: String,
+    val device_id: Long,
     val session_id: Int,
     val start: Long,
     val end: Long
