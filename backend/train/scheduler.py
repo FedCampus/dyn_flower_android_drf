@@ -5,6 +5,7 @@ from threading import Thread
 from flwr.common import Parameters
 from numpy import array, single
 from telemetry.models import TrainingSession
+from train.data import ServerData
 from train.models import ModelParams, TFLiteModel
 from train.run import PORT, flwr_server
 
@@ -85,7 +86,7 @@ def cleanup_task():
         task = None
 
 
-def server(model: TFLiteModel) -> tuple[str, int | None]:
+def server(model: TFLiteModel) -> ServerData:
     """Request a Flower server. Return `(status, port)`.
     `status` is "started" if the server is already running,
     "new" if newly started,
@@ -94,10 +95,10 @@ def server(model: TFLiteModel) -> tuple[str, int | None]:
     cleanup_task()
     if task:
         if task.model == model:
-            return "started", PORT
+            return ServerData("started", PORT)
         else:
-            return "occupied", None
+            return ServerData("occupied", None)
     else:
         # Start new server.
         task = Server(model)
-        return "new", PORT
+        return ServerData("new", PORT)
