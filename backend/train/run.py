@@ -75,11 +75,14 @@ def flwr_server(db_conn: Connection | None, initial_parameters: Parameters | Non
     strategy.db_conn = db_conn
 
     logger.warning("Starting Flower server.")
-    # Start Flower server for 10 rounds of federated learning
-    start_server(
-        server_address=f"0.0.0.0:{PORT}",
-        config=ServerConfig(num_rounds=10),
-        strategy=strategy,
-    )
+    try:
+        # Start Flower server for 10 rounds of federated learning
+        start_server(
+            server_address=f"0.0.0.0:{PORT}",
+            config=ServerConfig(num_rounds=10),
+            strategy=strategy,
+        )
+    except KeyboardInterrupt:
+        return
     if db_conn is not None:
         db_conn.send(("done", None))

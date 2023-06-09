@@ -16,14 +16,21 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.create
 import retrofit2.http.*
 import java.io.File
+import kotlin.properties.Delegates
 
 class Train constructor(
     val context: Context,
     backendUrl: String,
     val modelDao: ModelDao? = null
 ) {
+    var sessionId: Int? = null
+    var telemetry = false
+        private set
+    var deviceId by Delegates.notNull<Long>()
+        private set
     lateinit var channel: ManagedChannel
     val client = HttpClient(backendUrl)
+
 
     /**
      * Model to train with. Initialized after calling [getAdvertisedModel].
@@ -37,6 +44,11 @@ class Train constructor(
      */
     lateinit var flowerServiceRunnable: FlowerServiceRunnable
 
+
+    fun enableTelemetry(id: Long) {
+        deviceId = id
+        telemetry = true
+    }
 
     /**
      * Download advertised model information.
@@ -80,6 +92,7 @@ class Train constructor(
     @Throws
     suspend fun getServerInfo(): ServerData {
         val serverData = client.postServer(model)
+        sessionId = serverData.session_id
         Log.i("Server data", "$serverData")
         return serverData
     }
@@ -121,6 +134,38 @@ class Train constructor(
     fun start(callback: (String) -> Unit) {
         flowerServiceRunnable =
             FlowerServiceRunnable(FlowerServiceGrpc.newStub(channel), this, callback)
+    }
+
+    /**
+     * Ensure that telemetry is enabled and [sessionId] is non-null.
+     */
+    @Throws(AssertionError::class)
+    fun checkTelemetryEnabled() {
+        assert(telemetry)
+        assert(sessionId !== null)
+    }
+
+    @Throws
+    suspend fun fitInsTelemetry(start: Long, end: Long) {
+        checkTelemetryEnabled()
+        val body = FitInsTelemetryData(deviceId, sessionId!!, start, end)
+        client.fitInsTelemetry(body)
+        Log.i("Telemetry", "Sent fit instruction telemetry")
+    }
+
+    @Throws
+    suspend fun evaluateInsTelemetry(
+        start: Long,
+        end: Long,
+        loss: Float,
+        accuracy: Float,
+        test_size: Int
+    ) {
+        checkTelemetryEnabled()
+        val body =
+            EvaluateInsTelemetryData(deviceId, sessionId!!, start, end, loss, accuracy, test_size)
+        client.evaluateInsTelemetry(body)
+        Log.i("Telemetry", "Sent evaluate instruction telemetry")
     }
 }
 
@@ -176,8 +221,49 @@ class HttpClient constructor(url: String) {
         return postServer.postServer(body)
     }
 
+    interface FitInsTelemetry {
+        @POST("telemetry/fit_ins")
+        suspend fun fitInsTelemetry(@Body body: FitInsTelemetryData)
+    }
+
+    @Throws
+    suspend fun fitInsTelemetry(body: FitInsTelemetryData) {
+        val fitInsTelemetry = retrofit.create<FitInsTelemetry>()
+        fitInsTelemetry.fitInsTelemetry(body)
+    }
+
+    interface EvaluateInsTelemetry {
+        @POST("telemetry/evaluate_ins")
+        suspend fun evaluateInsTelemetry(@Body body: EvaluateInsTelemetryData)
+    }
+
+    @Throws
+    suspend fun evaluateInsTelemetry(body: EvaluateInsTelemetryData) {
+        val evaluateInsTelemetry = retrofit.create<EvaluateInsTelemetry>()
+        evaluateInsTelemetry.evaluateInsTelemetry(body)
+    }
 }
 
-data class ServerData(val status: String, val port: Int?)
+// Always change together with Python `train.data.ServerData`.
+data class ServerData(val status: String, val session_id: Int?, val port: Int?)
 
 data class PostServerData(val id: Long)
+
+// Always change together with Python `telemetry.models.FitInsTelemetryData`.
+data class FitInsTelemetryData(
+    val device_id: Long,
+    val session_id: Int,
+    val start: Long,
+    val end: Long
+)
+
+// Always change together with Python `telemetry.models.EvaluateInsTelemetryData`.
+data class EvaluateInsTelemetryData(
+    val device_id: Long,
+    val session_id: Int,
+    val start: Long,
+    val end: Long,
+    val loss: Float,
+    val accuracy: Float,
+    val test_size: Int
+)

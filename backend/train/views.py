@@ -29,5 +29,5 @@ def request_server(request: Request):
         model = TFLiteModel.objects.get(pk=id)
     except TFLiteModel.DoesNotExist:
         return Response("Model not found", HTTP_404_NOT_FOUND)
-    status, port = server(model)
-    return Response({"status": status, "port": port})
+    data = server(model)
+    return Response(data.__dict__)
