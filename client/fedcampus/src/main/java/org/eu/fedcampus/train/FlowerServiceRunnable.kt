@@ -46,7 +46,7 @@ class FlowerServiceRunnable
     })
 
     @Throws
-    private fun handleMessage(message: ServerMessage) {
+    fun handleMessage(message: ServerMessage) {
         val clientMessage = if (message.hasGetParametersIns()) {
             handleGetParamsIns()
         } else if (message.hasFitIns()) {
@@ -60,12 +60,14 @@ class FlowerServiceRunnable
         callback("Response sent to the server")
     }
 
+    @Throws
     fun handleGetParamsIns(): ClientMessage {
         Log.d(TAG, "Handling GetParameters")
         callback("Handling GetParameters message from the server.")
         return weightsAsProto(train.flowerClient.weights)
     }
 
+    @Throws
     fun handleFitIns(message: ServerMessage): ClientMessage {
         Log.d(TAG, "Handling FitIns")
         callback("Handling Fit request from the server.")
@@ -91,9 +93,11 @@ class FlowerServiceRunnable
         return fitResAsProto(outputs.first, outputs.second)
     }
 
+    @Throws
     fun handleEvaluateIns(message: ServerMessage): ClientMessage {
         Log.d(TAG, "Handling EvaluateIns")
         callback("Handling Evaluate request from the server")
+        val start = if (train.telemetry) System.currentTimeMillis() else null
         val layers = message.evaluateIns.parameters.tensorsList
         val nLayers = layers.size
         assert(nLayers.toLong() == train.model.n_layers)
@@ -103,10 +107,14 @@ class FlowerServiceRunnable
             newWeights[i] = ByteBuffer.wrap(bytes)
         }
         val inference = train.flowerClient.evaluate(newWeights)
-        val loss = inference.first.first
-        val accuracy = inference.first.second
+        val loss = inference.first.first!!
+        val accuracy = inference.first.second!!
         callback("Test Accuracy after this round = $accuracy")
-        val test_size = inference.second
+        val test_size = inference.second!!
+        if (start != null) {
+            val end = System.currentTimeMillis()
+            scope.launch { train.evaluateInsTelemetry(start, end, loss, accuracy, test_size) }
+        }
         return evaluateResAsProto(loss, test_size)
     }
 

@@ -136,13 +136,36 @@ class Train constructor(
             FlowerServiceRunnable(FlowerServiceGrpc.newStub(channel), this, callback)
     }
 
-    @Throws
-    suspend fun fitInsTelemetry(start: Long, end: Long) {
+    /**
+     * Ensure that telemetry is enabled and [sessionId] is non-null.
+     */
+    @Throws(AssertionError::class)
+    fun checkTelemetryEnabled() {
         assert(telemetry)
         assert(sessionId !== null)
+    }
+
+    @Throws
+    suspend fun fitInsTelemetry(start: Long, end: Long) {
+        checkTelemetryEnabled()
         val body = FitInsTelemetryData(deviceId, sessionId!!, start, end)
         client.fitInsTelemetry(body)
         Log.i("Telemetry", "Sent fit instruction telemetry")
+    }
+
+    @Throws
+    suspend fun evaluateInsTelemetry(
+        start: Long,
+        end: Long,
+        loss: Float,
+        accuracy: Float,
+        test_size: Int
+    ) {
+        checkTelemetryEnabled()
+        val body =
+            EvaluateInsTelemetryData(deviceId, sessionId!!, start, end, loss, accuracy, test_size)
+        client.evaluateInsTelemetry(body)
+        Log.i("Telemetry", "Sent evaluate instruction telemetry")
     }
 }
 
@@ -208,6 +231,17 @@ class HttpClient constructor(url: String) {
         val fitInsTelemetry = retrofit.create<FitInsTelemetry>()
         fitInsTelemetry.fitInsTelemetry(body)
     }
+
+    interface EvaluateInsTelemetry {
+        @POST("telemetry/evaluate_ins")
+        suspend fun evaluateInsTelemetry(@Body body: EvaluateInsTelemetryData)
+    }
+
+    @Throws
+    suspend fun evaluateInsTelemetry(body: EvaluateInsTelemetryData) {
+        val evaluateInsTelemetry = retrofit.create<EvaluateInsTelemetry>()
+        evaluateInsTelemetry.evaluateInsTelemetry(body)
+    }
 }
 
 // Always change together with Python `train.data.ServerData`.
@@ -221,4 +255,15 @@ data class FitInsTelemetryData(
     val session_id: Int,
     val start: Long,
     val end: Long
+)
+
+// Always change together with Python `telemetry.models.EvaluateInsTelemetryData`.
+data class EvaluateInsTelemetryData(
+    val device_id: Long,
+    val session_id: Int,
+    val start: Long,
+    val end: Long,
+    val loss: Float,
+    val accuracy: Float,
+    val test_size: Int
 )
