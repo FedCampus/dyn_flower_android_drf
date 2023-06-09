@@ -44,4 +44,12 @@ class EvaluateInsTelemetryDataSerializer(serializers.Serializer):
 
     class Meta:
         model = EvaluateInsTelemetryData
-        fields = ["device_id", "session_id", "start", "end"]
+        fields = [
+            "device_id",
+            "session_id",
+            "start",
+            "end",
+            "loss",
+            "accuracy",
+            "test_size",
+        ]

@@ -15,18 +15,13 @@ logger = getLogger(__name__)
 def monitor_db_conn_once(server: "Server"):
     kind, msg = server.db_conn.recv()
     if kind == "done":
-        logger.info("DB monitor thread shutting down")
         return True
     elif kind == "save_params":
         if not isinstance(msg, list):
-            logger.error(f"Wrong parameters {msg} for `save_params`.")
-            return False
+            raise ValueError(f"Wrong parameters {msg} for `save_params`.")
         to_save = ModelParams(params=msg, tflite_model=server.model)
-        try:
-            to_save.save()
-            server.update_session_end_time()
-        except RuntimeError as err:
-            logger.error(err)
+        to_save.save()
+        server.update_session_end_time()
     return False
 
 
@@ -35,8 +30,11 @@ def monitor_db_conn(server: "Server"):
         try:
             if monitor_db_conn_once(server):
                 break
-        except RuntimeError as err:
+        except InterruptedError:
+            return
+        except Exception as err:
             logger.error(err)
+            break
     server.update_session_end_time()
     logger.warning("DB monitor thread exiting.")
 
