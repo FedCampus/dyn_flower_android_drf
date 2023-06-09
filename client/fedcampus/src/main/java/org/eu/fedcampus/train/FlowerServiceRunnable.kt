@@ -72,9 +72,9 @@ class FlowerServiceRunnable
                 newWeights[i] = ByteBuffer.wrap(bytes)
             }
             val outputs = train.flowerClient.fit(newWeights, local_epochs)
-            if (train.telemetry) {
+            if (start != null) {
                 val end = System.currentTimeMillis()
-                GlobalScope.launch { train.fitInsTelemetry(start!!, end) }
+                GlobalScope.launch { train.fitInsTelemetry(start, end) }
             }
             fitResAsProto(outputs.first, outputs.second)
         } else if (message.hasEvaluateIns()) {

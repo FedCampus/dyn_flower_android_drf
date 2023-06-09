@@ -22,6 +22,7 @@ class Train constructor(
     backendUrl: String,
     val modelDao: ModelDao? = null
 ) {
+    var session_id: Int? = null
     var telemetry = false
     lateinit var deviceId: String
     lateinit var channel: ManagedChannel
@@ -88,6 +89,7 @@ class Train constructor(
     @Throws
     suspend fun getServerInfo(): ServerData {
         val serverData = client.postServer(model)
+        session_id = serverData.session_id
         Log.i("Server data", "$serverData")
         return serverData
     }
@@ -131,9 +133,12 @@ class Train constructor(
             FlowerServiceRunnable(FlowerServiceGrpc.newStub(channel), this, callback)
     }
 
+    @Throws
     suspend fun fitInsTelemetry(start: Long, end: Long) {
         assert(telemetry)
-        client.fitInsTelemetry(deviceId, start, end)
+        assert(session_id !== null)
+        val body = FitInsTelemetryData(deviceId, session_id!!, start, end)
+        client.fitInsTelemetry(body)
         Log.i("Telemetry", "Sent fit instruction telemetry")
     }
 }
@@ -196,15 +201,21 @@ class HttpClient constructor(url: String) {
     }
 
     @Throws
-    suspend fun fitInsTelemetry(id: String, start: Long, end: Long) {
-        val body = FitInsTelemetryData(id, start, end)
+    suspend fun fitInsTelemetry(body: FitInsTelemetryData) {
         val fitInsTelemetry = retrofit.create<FitInsTelemetry>()
         fitInsTelemetry.fitInsTelemetry(body)
     }
 }
 
-data class ServerData(val status: String, val port: Int?)
+// Always change together with Python `train.data.ServerData`.
+data class ServerData(val status: String, val session_id: Int?, val port: Int?)
 
 data class PostServerData(val id: Long)
 
-data class FitInsTelemetryData(val id: String, val start: Long, val end: Long)
+// Always change together with Python `telemetry.models.FitInsTelemetryData`.
+data class FitInsTelemetryData(
+    val device_id: String,
+    val session_id: Int,
+    val start: Long,
+    val end: Long
+)

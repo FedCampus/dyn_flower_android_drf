@@ -4,6 +4,7 @@ from django.db import models
 from numpy import ndarray
 
 
+# Always change together with Android `db.TFLiteModel.Model`.
 class TFLiteModel(models.Model):
     name = models.CharField(
         max_length=64,

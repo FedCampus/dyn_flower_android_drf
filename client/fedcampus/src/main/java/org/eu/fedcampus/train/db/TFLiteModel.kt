@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.*
 import java.io.File
 
+// Always change together with Python `train.models.TFLiteModel`.
 @Entity
 data class Model(
     @PrimaryKey val id: Long,

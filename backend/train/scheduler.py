@@ -95,10 +95,10 @@ def server(model: TFLiteModel) -> ServerData:
     cleanup_task()
     if task:
         if task.model == model:
-            return ServerData("started", PORT)
+            return ServerData("started", task.session.id, PORT)
         else:
-            return ServerData("occupied", None)
+            return ServerData("occupied", None, None)
     else:
         # Start new server.
         task = Server(model)
-        return ServerData("new", PORT)
+        return ServerData("new", task.session.id, PORT)
