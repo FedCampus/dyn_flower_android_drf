@@ -22,9 +22,11 @@ class Train constructor(
     backendUrl: String,
     val modelDao: ModelDao? = null
 ) {
-    var session_id: Int? = null
+    var sessionId: Int? = null
     var telemetry = false
+        private set
     lateinit var deviceId: String
+        private set
     lateinit var channel: ManagedChannel
     val client = HttpClient(backendUrl)
 
@@ -89,7 +91,7 @@ class Train constructor(
     @Throws
     suspend fun getServerInfo(): ServerData {
         val serverData = client.postServer(model)
-        session_id = serverData.session_id
+        sessionId = serverData.session_id
         Log.i("Server data", "$serverData")
         return serverData
     }
@@ -136,8 +138,8 @@ class Train constructor(
     @Throws
     suspend fun fitInsTelemetry(start: Long, end: Long) {
         assert(telemetry)
-        assert(session_id !== null)
-        val body = FitInsTelemetryData(deviceId, session_id!!, start, end)
+        assert(sessionId !== null)
+        val body = FitInsTelemetryData(deviceId, sessionId!!, start, end)
         client.fitInsTelemetry(body)
         Log.i("Telemetry", "Sent fit instruction telemetry")
     }
