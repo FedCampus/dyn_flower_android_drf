@@ -50,6 +50,11 @@ class Train constructor(
         telemetry = true
     }
 
+    fun disableTelemetry() {
+        deviceId = 0
+        telemetry = false
+    }
+
     /**
      * Download advertised model information.
      */
