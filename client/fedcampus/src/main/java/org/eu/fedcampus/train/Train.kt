@@ -6,14 +6,10 @@ import flwr.android_client.FlowerServiceGrpc
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.*
-import okhttp3.ResponseBody
 import org.eu.fedcampus.train.db.Model
 import org.eu.fedcampus.train.db.ModelDao
 import org.tensorflow.lite.examples.transfer.api.ExternalModelLoader
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.create
 import retrofit2.http.*
 import java.io.File
 import kotlin.properties.Delegates
@@ -33,7 +29,7 @@ class Train constructor(
 
 
     /**
-     * Model to train with. Initialized after calling [getAdvertisedModel].
+     * Model to train with. Initialized after calling [advertisedModel].
      */
     lateinit var model: Model
     lateinit var modelDir: File
@@ -50,6 +46,7 @@ class Train constructor(
         telemetry = true
     }
 
+    @Suppress("unused")
     fun disableTelemetry() {
         deviceId = 0
         telemetry = false
@@ -59,8 +56,8 @@ class Train constructor(
      * Download advertised model information.
      */
     @Throws
-    suspend fun getAdvertisedModel(): Model {
-        model = client.getAdvertisedModel()
+    suspend fun advertisedModel(dataType: String): Model {
+        model = client.advertisedModel(PostAdvertisedData(dataType))
         Log.d("Model", "$model")
         return model
     }
@@ -107,9 +104,9 @@ class Train constructor(
      * @return Model loader.
      */
     @Throws
-    suspend fun prepareModelLoader(): ExternalModelLoader {
+    suspend fun prepareModelLoader(dataType: String): ExternalModelLoader {
         withContext(Dispatchers.IO) {
-            getAdvertisedModel()
+            advertisedModel(dataType)
             modelDir = model.getModelDir(context)
             downloadModelFiles()
         }
@@ -175,100 +172,3 @@ class Train constructor(
 }
 
 const val HUNDRED_MEBIBYTE = 100 * 1024 * 1024
-
-class HttpClient constructor(url: String) {
-    private val retrofit = Retrofit.Builder()
-        // https://developer.android.com/studio/run/emulator-networking#networkaddresses
-        .baseUrl(url)
-        .addConverterFactory(GsonConverterFactory.create()).build()
-
-    interface GetAdvertised {
-        @GET("train/get_advertised")
-        suspend fun getAdvertised(): Model
-    }
-
-    /**
-     * Download advertised model information.
-     */
-    @Throws
-    suspend fun getAdvertisedModel(): Model {
-        val getAdvertised = retrofit.create<GetAdvertised>()
-        return getAdvertised.getAdvertised()
-    }
-
-    interface DownloadFile {
-        @GET
-        @Streaming
-        suspend fun download(@Url url: String): ResponseBody
-    }
-
-    @Throws
-    suspend fun downloadFile(url: String, parentDir: File, fileName: String) {
-        parentDir.mkdirs()
-        val file = File(parentDir, fileName)
-        val download = retrofit.create<DownloadFile>()
-        download.download(url).byteStream().use { inputStream ->
-            file.outputStream().use { outputStream ->
-                inputStream.copyTo(outputStream)
-            }
-        }
-    }
-
-    interface PostServer {
-        @POST("train/server")
-        suspend fun postServer(@Body body: PostServerData): ServerData
-    }
-
-    @Throws
-    suspend fun postServer(model: Model): ServerData {
-        val body = PostServerData(model.id)
-        val postServer = retrofit.create<PostServer>()
-        return postServer.postServer(body)
-    }
-
-    interface FitInsTelemetry {
-        @POST("telemetry/fit_ins")
-        suspend fun fitInsTelemetry(@Body body: FitInsTelemetryData)
-    }
-
-    @Throws
-    suspend fun fitInsTelemetry(body: FitInsTelemetryData) {
-        val fitInsTelemetry = retrofit.create<FitInsTelemetry>()
-        fitInsTelemetry.fitInsTelemetry(body)
-    }
-
-    interface EvaluateInsTelemetry {
-        @POST("telemetry/evaluate_ins")
-        suspend fun evaluateInsTelemetry(@Body body: EvaluateInsTelemetryData)
-    }
-
-    @Throws
-    suspend fun evaluateInsTelemetry(body: EvaluateInsTelemetryData) {
-        val evaluateInsTelemetry = retrofit.create<EvaluateInsTelemetry>()
-        evaluateInsTelemetry.evaluateInsTelemetry(body)
-    }
-}
-
-// Always change together with Python `train.data.ServerData`.
-data class ServerData(val status: String, val session_id: Int?, val port: Int?)
-
-data class PostServerData(val id: Long)
-
-// Always change together with Python `telemetry.models.FitInsTelemetryData`.
-data class FitInsTelemetryData(
-    val device_id: Long,
-    val session_id: Int,
-    val start: Long,
-    val end: Long
-)
-
-// Always change together with Python `telemetry.models.EvaluateInsTelemetryData`.
-data class EvaluateInsTelemetryData(
-    val device_id: Long,
-    val session_id: Int,
-    val start: Long,
-    val end: Long,
-    val loss: Float,
-    val accuracy: Float,
-    val test_size: Int
-)

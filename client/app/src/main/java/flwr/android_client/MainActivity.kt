@@ -22,6 +22,7 @@ import org.eu.fedcampus.train.Train
 import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
 import java.util.*
 
+@Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
     private val scope = MainScope()
     lateinit var train: Train
@@ -154,7 +155,7 @@ class MainActivity : AppCompatActivity() {
         train = Train(this, backendUrl, db.modelDao())
         val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         train.enableTelemetry(stringToLong(deviceId))
-        val modelLoader = train.prepareModelLoader()
+        val modelLoader = train.prepareModelLoader(DATA_TYPE)
         val classes = listOf(
             "cat",
             "dog",
@@ -211,3 +212,4 @@ class MainActivity : AppCompatActivity() {
 }
 
 private const val TAG = "MainActivity"
+private const val DATA_TYPE = "CIFAR10_32x32x3"
