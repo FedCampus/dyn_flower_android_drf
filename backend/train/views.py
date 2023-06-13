@@ -9,11 +9,11 @@ from train.serializers import TFLiteModelSerializer
 
 
 # https://www.django-rest-framework.org/api-guide/views/#api_view
-@api_view(["GET"])
+@api_view(["POST"])
 # https://stackoverflow.com/questions/31335736/cannot-apply-djangomodelpermissions-on-a-view-that-does-not-have-queryset-pro
 @permission_classes((permissions.AllowAny,))
 def advertise_model(request):
-    # TODO: Remove hardcode.
+    # TODO: Use request content to decide model.
     model = TFLiteModel.objects.first()
     serializer = TFLiteModelSerializer(model)
     return Response(serializer.data)

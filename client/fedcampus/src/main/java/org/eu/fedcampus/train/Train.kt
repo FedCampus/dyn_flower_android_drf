@@ -33,7 +33,7 @@ class Train constructor(
 
 
     /**
-     * Model to train with. Initialized after calling [getAdvertisedModel].
+     * Model to train with. Initialized after calling [advertisedModel].
      */
     lateinit var model: Model
     lateinit var modelDir: File
@@ -59,8 +59,8 @@ class Train constructor(
      * Download advertised model information.
      */
     @Throws
-    suspend fun getAdvertisedModel(): Model {
-        model = client.getAdvertisedModel()
+    suspend fun advertisedModel(): Model {
+        model = client.advertisedModel()
         Log.d("Model", "$model")
         return model
     }
@@ -109,7 +109,7 @@ class Train constructor(
     @Throws
     suspend fun prepareModelLoader(): ExternalModelLoader {
         withContext(Dispatchers.IO) {
-            getAdvertisedModel()
+            advertisedModel()
             modelDir = model.getModelDir(context)
             downloadModelFiles()
         }
@@ -182,18 +182,18 @@ class HttpClient constructor(url: String) {
         .baseUrl(url)
         .addConverterFactory(GsonConverterFactory.create()).build()
 
-    interface GetAdvertised {
-        @GET("train/get_advertised")
-        suspend fun getAdvertised(): Model
+    interface Advertised {
+        @POST("train/advertised")
+        suspend fun advertised(): Model
     }
 
     /**
      * Download advertised model information.
      */
     @Throws
-    suspend fun getAdvertisedModel(): Model {
-        val getAdvertised = retrofit.create<GetAdvertised>()
-        return getAdvertised.getAdvertised()
+    suspend fun advertisedModel(): Model {
+        val advertised = retrofit.create<Advertised>()
+        return advertised.advertised()
     }
 
     interface DownloadFile {
