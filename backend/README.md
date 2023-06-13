@@ -34,43 +34,13 @@ Your `static/` should look like this:
 
 ### Create TFLite model in database
 
-Enter a Django shell:
+Pipe the seed script into a Django shell:
 
 ```sh
-python3 manage.py shell
+cat seed.py | python3 manage.py shell
 ```
 
-Add the CIFAR10 model to database by:
-
-```python
-from train.models import *
-m = TFLiteModel(name="CIFAR10_model", n_layers=10)
-m.save()
-f = TFLiteFile(path="/static/CIFAR10_model/bottleneck.tflite", tflite_model=m)
-f.save()
-f = TFLiteFile(path="/static/CIFAR10_model/inference.tflite", tflite_model=m)
-f.save()
-f = TFLiteFile(path="/static/CIFAR10_model/initialize.tflite", tflite_model=m)
-f.save()
-f = TFLiteFile(path="/static/CIFAR10_model/optimizer.tflite", tflite_model=m)
-f.save()
-f = TFLiteFile(path="/static/CIFAR10_model/train_head.tflite", tflite_model=m)
-f.save()
-```
-
-Validate that the models are created:
-
-```python
-from train.serializers import *
-s = TFLiteModelSerializer(m)
-s.data
-```
-
-You should get:
-
-```python
-{'name': 'CIFAR10_model', 'n_layers': 10, 'tflite_files': ['/static/CIFAR10_model/bottleneck.tflite', '/static/CIFAR10_model/inference.tflite', '/static/CIFAR10_model/initialize.tflite', '/static/CIFAR10_model/optimizer.tflite', '/static/CIFAR10_model/train_head.tflite']}
-```
+The above script addes the CIFAR10 training data type and model to database.
 
 ## Development
 
@@ -81,7 +51,6 @@ python3 manage.py runserver 0.0.0.0:8000
 ```
 
 Find you local IP in your system settings for the physical device to connect to.
-
 
 ## Docker Deployment
 
@@ -103,7 +72,7 @@ To run the Docker image, use the `docker run` command along with the appropriate
 docker run -p 8000:8000 -p 8080:8080 fedcampus/dyn_flower_android_drf:initial
 ```
 
-This command maps port 8000 inside the Docker container to port 8000 on your host machine, and does the same for port 8080. 
+This command maps port 8000 inside the Docker container to port 8000 on your host machine, and does the same for port 8080.
 
 ### Testing with Docker
 
