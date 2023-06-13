@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -7,14 +9,18 @@ from train.models import TFLiteModel, TrainingDataType
 from train.scheduler import server
 from train.serializers import TFLiteModelSerializer
 
+logger = logging.getLogger(__name__)
+
 
 def model_for_data_type(data_type):
     if not type(data_type) == str:
+        logger.error(f"Looking up model for non-string data_type `{data_type}`.")
         return
     try:
         data_type = TrainingDataType.objects.get(name=data_type)
         return TFLiteModel.objects.filter(data_type=data_type).last()
-    except RuntimeError:
+    except Exception as err:
+        logger.error(f"{err} while looking up model for data_type `{data_type}`.")
         return
 
 
