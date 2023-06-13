@@ -13,7 +13,6 @@ def model_for_data_type(data_type):
         return
     try:
         data_type = TrainingDataType.objects.get(name=data_type)
-        print(data_type)
         return TFLiteModel.objects.filter(data_type=data_type).last()
     except RuntimeError:
         return
@@ -28,9 +27,7 @@ def advertise_model(request):
     model = model_for_data_type(data_type)
     if model is None:
         model = TFLiteModel.objects.last()
-    # TODO: Use request content to decide model.
     serializer = TFLiteModelSerializer(model)
-    print(serializer.data)
     return Response(serializer.data)
 
 
