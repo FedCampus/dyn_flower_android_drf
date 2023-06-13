@@ -46,6 +46,7 @@ class Train constructor(
         telemetry = true
     }
 
+    @Suppress("unused")
     fun disableTelemetry() {
         deviceId = 0
         telemetry = false
@@ -55,8 +56,8 @@ class Train constructor(
      * Download advertised model information.
      */
     @Throws
-    suspend fun advertisedModel(): Model {
-        model = client.advertisedModel()
+    suspend fun advertisedModel(dataType: String): Model {
+        model = client.advertisedModel(PostAdvertisedData(dataType))
         Log.d("Model", "$model")
         return model
     }
@@ -103,9 +104,9 @@ class Train constructor(
      * @return Model loader.
      */
     @Throws
-    suspend fun prepareModelLoader(): ExternalModelLoader {
+    suspend fun prepareModelLoader(dataType: String): ExternalModelLoader {
         withContext(Dispatchers.IO) {
-            advertisedModel()
+            advertisedModel(dataType)
             modelDir = model.getModelDir(context)
             downloadModelFiles()
         }

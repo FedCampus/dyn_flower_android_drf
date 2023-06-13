@@ -3,9 +3,20 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 from rest_framework.views import Request
-from train.models import TFLiteModel
+from train.models import TFLiteModel, TrainingDataType
 from train.scheduler import server
 from train.serializers import TFLiteModelSerializer
+
+
+def model_for_data_type(data_type):
+    if not type(data_type) == str:
+        return
+    try:
+        data_type = TrainingDataType.objects.get(name=data_type)
+        print(data_type)
+        return TFLiteModel.objects.filter(data_type=data_type).last()
+    except RuntimeError:
+        return
 
 
 # https://www.django-rest-framework.org/api-guide/views/#api_view
@@ -13,9 +24,13 @@ from train.serializers import TFLiteModelSerializer
 # https://stackoverflow.com/questions/31335736/cannot-apply-djangomodelpermissions-on-a-view-that-does-not-have-queryset-pro
 @permission_classes((permissions.AllowAny,))
 def advertise_model(request):
+    data_type = request.data.get("data_type")
+    model = model_for_data_type(data_type)
+    if model is None:
+        model = TFLiteModel.objects.last()
     # TODO: Use request content to decide model.
-    model = TFLiteModel.objects.first()
     serializer = TFLiteModelSerializer(model)
+    print(serializer.data)
     return Response(serializer.data)
 
 

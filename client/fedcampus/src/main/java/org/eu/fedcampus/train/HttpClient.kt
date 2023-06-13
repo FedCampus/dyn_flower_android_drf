@@ -16,16 +16,16 @@ class HttpClient constructor(url: String) {
 
     interface Advertised {
         @POST("train/advertised")
-        suspend fun advertised(): Model
+        suspend fun advertised(@Body body: PostAdvertisedData): Model
     }
 
     /**
      * Download advertised model information.
      */
     @Throws
-    suspend fun advertisedModel(): Model {
+    suspend fun advertisedModel(body: PostAdvertisedData): Model {
         val advertised = retrofit.create<Advertised>()
-        return advertised.advertised()
+        return advertised.advertised(body)
     }
 
     interface DownloadFile {
@@ -80,6 +80,8 @@ class HttpClient constructor(url: String) {
         evaluateInsTelemetry.evaluateInsTelemetry(body)
     }
 }
+
+data class PostAdvertisedData(val data_type: String)
 
 // Always change together with Python `train.data.ServerData`.
 data class ServerData(val status: String, val session_id: Int?, val port: Int?)
