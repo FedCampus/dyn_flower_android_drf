@@ -45,7 +45,7 @@ def convert_to_tflite(head):
         base_path,
         heads.KerasModelHead(head),
         optimizers.SGD(1e-3),
-        train_batch_size=128,
+        train_batch_size=1,
     )
 
     converter.convert_and_save("tflite_model")
