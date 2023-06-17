@@ -58,21 +58,25 @@ This project can be deployed using Docker, which ensures that it will run the sa
 
 ### Pull the Docker Image
 
-The Docker image for this project is hosted on Docker Hub. To pull the image to your local machine, run the following command:
+- Note that the latest tag may not be avaliable before the PR gets merged, but it will come soon enough that I put it in here to minimize further modification of the README file
+
+The Docker image for this project is hosted and actively updated on Docker Hub via the CI/CD pipeline. To pull the image to your local machine, run the following command:
 
 ```sh
-docker pull fedcampus/dyn_flower_android_drf:initial
+docker pull fedcampus/dyn_flower_android_drf:latest
 ```
 
 ### Run the Docker Image
 
+Before running the Docker image, please ensure that the models are located on local machine as bind mount will be used to pass the tflite files to the docker image to allow different models to be used.
+
 To run the Docker image, use the `docker run` command along with the appropriate port bindings. The application uses ports 8000 and 8080. Here's how you can run the Docker image:
 
 ```sh
-docker run -p 8000:8000 -p 8080:8080 fedcampus/dyn_flower_android_drf:initial
+docker run --name name-of-your-choice -p 8000:8000 -p 8080:8080 -v /path/to/static:/app/static fedcampus/dyn_flower_android_drf:latest
 ```
 
-This command maps port 8000 inside the Docker container to port 8000 on your host machine, and does the same for port 8080.
+This command maps port 8000 (the value on the right) inside the Docker container to port 8000 (the value on the left) on your host machine, and does the same for port 8080.
 
 ### Testing with Docker
 
@@ -84,10 +88,10 @@ For example, to make a POST request to `/train/server` using curl, you would run
 curl -X POST http://localhost:8000/train/server
 ```
 
-And to make a POST request to `/train/get_advertised`, you would run:
+And to make a POST request to `/train/advertised`, you would run:
 
 ```sh
-curl -X POST http://localhost:8000/train/get_advertised
+curl -X POST http://localhost:8000/train/advertised
 ```
 
 Remember to replace `localhost` and `8000` with the appropriate values if you're running Docker on a different host or port.
