@@ -66,6 +66,10 @@ The Docker image for this project is hosted and actively updated on Docker Hub v
 docker pull fedcampus/dyn_flower_android_drf:latest
 ```
 
+### Prepare the model
+
+To prepare the model, follow the **"Download TFLite models"** and use `pwd` to get the directory of `\static`, we need to use that later
+
 ### Run the Docker Image
 
 Before running the Docker image, please ensure that the models are located on local machine as bind mount will be used to pass the tflite files to the docker image to allow different models to be used.
@@ -73,10 +77,16 @@ Before running the Docker image, please ensure that the models are located on lo
 To run the Docker image, use the `docker run` command along with the appropriate port bindings. The application uses ports 8000 and 8080. Here's how you can run the Docker image:
 
 ```sh
-docker run --name name-of-your-choice -p 8000:8000 -p 8080:8080 -v /path/to/static:/app/static fedcampus/dyn_flower_android_drf:latest
+docker run --name name-of-your-choice \
+-p 8000:8000 \
+-p 8080:8080 \
+-v /path/to/static:/app/static \
+fedcampus/dyn_flower_android_drf:latest
 ```
 
 This command maps port 8000 (the value on the right) inside the Docker container to port 8000 (the value on the left) on your host machine, and does the same for port 8080.
+
+The part behind `-v` is used for bind mount (Docker Volume is also supported, to use Docker Volume, replace the left side of the bind mount with the name of the Volume)
 
 ### Testing with Docker
 
