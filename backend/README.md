@@ -68,7 +68,7 @@ docker pull fedcampus/dyn_flower_android_drf:latest
 
 ### Prepare the model
 
-To prepare the model, follow the **"Download TFLite models"** and use `pwd` to get the directory of `\static`, we need to use that later
+To prepare the model, follow the **"Download TFLite models"** and use `pwd` to get the directory of `/static`, we need to use that later
 
 ### Run the Docker Image
 
