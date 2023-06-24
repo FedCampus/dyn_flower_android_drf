@@ -68,6 +68,6 @@ class ExampleModel(tf.Module):
                 dt=var.dtype,
                 name="restore",
             )
-        var.assign(restored)
-        restored_tensors[var.name] = restored
+            var.assign(restored)
+            restored_tensors[var.name] = restored
         return restored_tensors
