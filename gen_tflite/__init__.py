@@ -1,6 +1,10 @@
 import tensorflow as tf
 
 
+def red(string: str) -> str:
+    return f"\033[91m{string}\033[0m"
+
+
 def save_model(model, saved_model_dir):
     parameters = model.parameters.get_concrete_function()
     init_params = parameters()
@@ -22,6 +26,9 @@ def save_model(model, saved_model_dir):
             "restore": restore,
         },
     )
+
+    shape = f"{[param.shape.as_list() for param in init_params]}"
+    print(f"Model parameter shape: {red(shape)}.")
 
 
 def convert_saved_model(saved_model_dir):

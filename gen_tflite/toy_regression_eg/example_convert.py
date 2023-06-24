@@ -88,7 +88,7 @@ def test_tflite_file(tflite_file, x_train):
 
 
 SAVED_MODEL_DIR = "saved_model"
-TFLITE_FILE = f"{DIR}/toy_regression.tflite"
+TFLITE_FILE = f"toy_regression.tflite"
 
 
 def main():
