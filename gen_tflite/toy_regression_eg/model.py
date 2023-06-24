@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 
-class ExampleModel(tf.Module):
+class ToyRegressionModel(tf.Module):
     def __init__(self, lr=0.000000001):
         self.model = tf.keras.Sequential(
             [

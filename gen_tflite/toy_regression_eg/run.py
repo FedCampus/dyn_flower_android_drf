@@ -1,16 +1,18 @@
 from os import path
+
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 
 from .. import *
-from . import example_model
+from .model import ToyRegressionModel
 
 DIR = path.dirname(__file__)
 
+
 def get_training_data():
     data = pd.read_csv(
-        f"{DIR}/example_data.csv", header=0, names=["step", "calorie", "distance"]
+        f"{DIR}/data.csv", header=0, names=["step", "calorie", "distance"]
     ).dropna()
 
     x_train, y_train = data.iloc[:, 0:2].astype("float32"), data["distance"].to_frame(
@@ -26,7 +28,7 @@ def train_model(x_train, y_train):
     NUM_EPOCHS = 30
     BATCH_SIZE = 1
     losses = np.zeros([NUM_EPOCHS])
-    model = example_model.ExampleModel(0.00000000003)
+    model = ToyRegressionModel(0.00000000003)
 
     train_ds = tf.data.Dataset.from_tensor_slices((x_train, y_train))
     train_ds = train_ds.batch(BATCH_SIZE)
