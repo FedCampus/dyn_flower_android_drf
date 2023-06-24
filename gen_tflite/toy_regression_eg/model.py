@@ -27,15 +27,7 @@ class ToyRegressionModel(tf.Module):
         ]
     )
     def train(self, x, y):
-        with tf.GradientTape() as tape:
-            prediction = self.model(x)
-            loss = self.model.loss(y, prediction)
-        gradients = tape.gradient(loss, self.model.trainable_variables)
-        self.model.optimizer.apply_gradients(
-            zip(gradients, self.model.trainable_variables)
-        )
-        result = {"loss": loss}
-        return result
+        return self.model.train_step((x, y))
 
     @tf.function(
         input_signature=[

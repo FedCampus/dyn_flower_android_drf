@@ -89,7 +89,6 @@ def test_tflite_file(tflite_file, x_train):
     print(f"Inference result logits after restoring new parameters: {h1}.")
 
 
-SAVED_MODEL_DIR = "saved_model"
 TFLITE_FILE = f"toy_regression.tflite"
 
 
