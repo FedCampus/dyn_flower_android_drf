@@ -1,7 +1,9 @@
 import tensorflow as tf
 
+from .. import *
 
-class ToyRegressionModel(tf.Module):
+
+class ToyRegressionModel(BaseModel):
     def __init__(self, lr=0.000000001):
         self.model = tf.keras.Sequential(
             [
@@ -37,14 +39,3 @@ class ToyRegressionModel(tf.Module):
     def infer(self, x):
         logits = self.model(x)
         return {"logits": logits}
-
-    @tf.function(input_signature=[])
-    def parameters(self):
-        return [weight.read_value() for weight in self.model.weights]
-
-    @tf.function
-    def restore(self, **parameters):
-        for index, weight in enumerate(self.model.weights):
-            parameter = parameters[f"output_{index}"]
-            weight.assign(parameter)
-        return self.parameters()

@@ -21,6 +21,8 @@ def get_training_data():
     assert x_train.shape == (11, 2)
     assert y_train.shape == (11, 1)
 
+    shapes = str({"x": x_train.shape, "y": y_train.shape})
+    print(f"Data shapes: {red(shapes)}")
     return x_train, y_train
 
 

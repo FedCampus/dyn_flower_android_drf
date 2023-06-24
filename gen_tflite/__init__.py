@@ -7,6 +7,30 @@ def red(string: str) -> str:
     return f"\033[91m{string}\033[0m"
 
 
+class BaseModel(tf.Module):
+    model: tf.keras.Model
+
+    @tf.function
+    def train(self, x, y):
+        return self.model.train_step((x, y))
+
+    @tf.function
+    def infer(self, x):
+        return {"logits": self.model(x)}
+
+    @tf.function(input_signature=[])
+    def parameters(self):
+        return [weight.read_value() for weight in self.model.weights]
+
+    @tf.function
+    def restore(self, **parameters):
+        for index, weight in enumerate(self.model.weights):
+            parameter = parameters[f"output_{index}"]
+            weight.assign(parameter)
+        assert self.parameters is not None
+        return self.parameters()
+
+
 def save_model(model, saved_model_dir):
     parameters = model.parameters.get_concrete_function()
     init_params = parameters()
@@ -34,7 +58,6 @@ def save_model(model, saved_model_dir):
 
 
 def convert_saved_model(saved_model_dir):
-    # Convert the model
     converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)
     converter.target_spec.supported_ops = [
         tf.lite.OpsSet.TFLITE_BUILTINS,  # enable TensorFlow Lite ops.
