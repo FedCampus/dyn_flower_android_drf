@@ -46,28 +46,13 @@ class ExampleModel(tf.Module):
         logits = self.model(x)
         return {"logits": logits}
 
-    @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
-    def save(self, checkpoint_path):
-        tensor_names = [weight.name for weight in self.model.weights]
-        tensors_to_save = [weight.read_value() for weight in self.model.weights]
-        tf.raw_ops.Save(
-            filename=checkpoint_path,
-            tensor_names=tensor_names,
-            data=tensors_to_save,
-            name="save",
-        )
-        return {"checkpoint_path": checkpoint_path}
+    @tf.function(input_signature=[])
+    def parameters(self):
+        return [weight.read_value() for weight in self.model.weights]
 
-    @tf.function(input_signature=[tf.TensorSpec(shape=[], dtype=tf.string)])
-    def restore(self, checkpoint_path):
-        restored_tensors = {}
-        for var in self.model.weights:
-            restored = tf.raw_ops.Restore(
-                file_pattern=checkpoint_path,
-                tensor_name=var.name,
-                dt=var.dtype,
-                name="restore",
-            )
-            var.assign(restored)
-            restored_tensors[var.name] = restored
-        return restored_tensors
+    @tf.function
+    def restore(self, **parameters):
+        for index, weight in enumerate(self.model.weights):
+            parameter = parameters[f"output_{index}"]
+            weight.assign(parameter)
+        return self.parameters()

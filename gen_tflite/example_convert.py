@@ -45,14 +45,24 @@ def train_model(x_train, y_train):
 
 
 def save_model(model, saved_model_dir):
+    parameters = model.parameters.get_concrete_function()
+    init_params = parameters()
+    print(f"Initial parameters is {init_params}.")
+    transformed_params = {
+        f"output_{index}": param for index, param in enumerate(init_params)
+    }
+    print(f"Transformed parameters is {transformed_params}.")
+    restore = model.restore.get_concrete_function(**transformed_params)
+    restore_test = restore(**transformed_params)
+    print(f"Restore test result: {restore_test}.")
     tf.saved_model.save(
         model,
         saved_model_dir,
         signatures={
             "train": model.train.get_concrete_function(),
             "infer": model.infer.get_concrete_function(),
-            "save": model.save.get_concrete_function(),
-            "restore": model.restore.get_concrete_function(),
+            "parameters": parameters,
+            "restore": restore,
         },
     )
 
@@ -76,14 +86,31 @@ def save_tflite_model(tflite_model, tflite_file):
         return model_file.write(tflite_model)
 
 
+def parameters_from_raw_dict(raw_dict):
+    parameters = []
+    index = 0
+    while True:
+        parameter = raw_dict.get(f"output_{index}")
+        if parameter is None:
+            break
+        parameters.append(parameter)
+        index += 1
+    return parameters
+
+
 def test_tflite_file(tflite_file, x_train):
     interpreter = tf.lite.Interpreter(model_path=tflite_file)
     interpreter.allocate_tensors()
 
     infer = interpreter.get_signature_runner("infer")
     h1 = infer(x=x_train).get("logits")
-    assert h1 is not None
-    print(h1[0])
+    print(f"Inference result logits before training: {h1}.")
+
+    parameters = interpreter.get_signature_runner("parameters")
+    raw_old_params = parameters()
+    print(f"Raw parameters before training: {raw_old_params}.")
+    old_params = parameters_from_raw_dict(raw_old_params)
+    print(f"Parameters before training: {old_params}.")
 
     train = interpreter.get_signature_runner("train")
     result = train(
@@ -94,8 +121,21 @@ def test_tflite_file(tflite_file, x_train):
 
     infer = interpreter.get_signature_runner("infer")
     h1 = infer(x=x_train).get("logits")
-    assert h1 is not None
-    print(h1[0])
+    print(f"Inference result logits after training: {h1}.")
+
+    raw_new_params = parameters()
+    print(f"Raw parameters after training: {raw_new_params}.")
+    new_params = parameters_from_raw_dict(raw_new_params)
+    print(f"Parameters after training: {new_params}.")
+
+    restore = interpreter.get_signature_runner("restore")
+    print(f"Raw parameters after restoring old parameters: {restore(**raw_old_params)}")
+    h1 = infer(x=x_train).get("logits")
+    print(f"Inference result logits after restoring old parameters: {h1}.")
+
+    print(f"Raw parameters after restoring new parameters: {restore(**raw_new_params)}")
+    h1 = infer(x=x_train).get("logits")
+    print(f"Inference result logits after restoring new parameters: {h1}.")
 
 
 SAVED_MODEL_DIR = "saved_model"
