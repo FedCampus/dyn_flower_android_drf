@@ -49,10 +49,10 @@ def tflite_model_class(cls):
     Convert `cls`'s methods using `@tf.function` with proper `input_signature`
     according to `X_SHAPE` and `Y_SHAPE`.
     The converted methods are `train`, `infer`, `parameters`, `restore`.
-    Only `restore`'s `input_signature is not specified because it need to be
+    Only `restore`'s `input_signature` is not specified because it need to be
     determined after examples of parameters are given."""
-    cls.x_spec = tf.TensorSpec([None] + cls.X_SHAPE, tf.float32)
-    cls.y_spec = tf.TensorSpec([None] + cls.Y_SHAPE, tf.float32)
+    cls.x_spec = tf.TensorSpec([None] + cls.X_SHAPE, tf.float32)  # type: ignore
+    cls.y_spec = tf.TensorSpec([None] + cls.Y_SHAPE, tf.float32)  # type: ignore
     cls.train = tf.function(
         cls.train,
         input_signature=[cls.x_spec, cls.y_spec],
