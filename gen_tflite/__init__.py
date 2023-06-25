@@ -8,13 +8,13 @@ def red(string: str) -> str:
 
 
 class BaseModel(tf.Module):
+    X_SHAPE = [1]
+    Y_SHAPE = [1]
     model: tf.keras.Model
 
-    @tf.function
     def train(self, x, y):
         return self.model.train_step((x, y))
 
-    @tf.function
     def infer(self, x):
         return {"logits": self.model(x)}
 
@@ -32,6 +32,23 @@ class BaseModel(tf.Module):
             weight.assign(parameter)
         assert self.parameters is not None
         return self.parameters()
+
+
+def tflite_model_class(cls):
+    cls.train = tf.function(
+        cls.train,
+        input_signature=[
+            tf.TensorSpec([None] + cls.X_SHAPE, tf.float32),
+            tf.TensorSpec([None] + cls.Y_SHAPE, tf.float32),
+        ],
+    )
+    cls.infer = tf.function(
+        cls.infer,
+        input_signature=[
+            tf.TensorSpec([None] + cls.X_SHAPE, tf.float32),
+        ],
+    )
+    return cls
 
 
 def save_model(model, saved_model_dir):
