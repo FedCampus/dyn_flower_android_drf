@@ -18,11 +18,11 @@ class FlowerServiceRunnable
  * Start communication with Flower server and training in the background.
  */
 @Throws constructor(
-    asyncStub: FlowerServiceGrpc.FlowerServiceStub,
-    val train: Train,
-    val callback: (String) -> Unit
+    asyncStub: FlowerServiceGrpc.FlowerServiceStub, val train: Train, val callback: (String) -> Unit
 ) {
     private val scope = MainScope()
+    private val sampleSize: Int
+        get() = train.flowerClient.trainingSamples.size
     val finishLatch = CountDownLatch(1)
     val requestObserver = asyncStub.join(object : StreamObserver<ServerMessage> {
         override fun onNext(msg: ServerMessage) {
@@ -64,7 +64,7 @@ class FlowerServiceRunnable
     fun handleGetParamsIns(): ClientMessage {
         Log.d(TAG, "Handling GetParameters")
         callback("Handling GetParameters message from the server.")
-        return weightsAsProto(train.flowerClient.weights)
+        return weightsAsProto(weightsByteBuffers())
     }
 
     @Throws
@@ -73,24 +73,22 @@ class FlowerServiceRunnable
         callback("Handling Fit request from the server.")
         val start = if (train.telemetry) System.currentTimeMillis() else null
         val layers = message.fitIns.parameters.tensorsList
-        val nLayers = layers.size
-        assert(nLayers.toLong() == train.model.n_layers)
+        assert(layers.size.toLong() == train.model.n_layers)
         val epoch_config = message.fitIns.configMap.getOrDefault(
-            "local_epochs",
-            Scalar.newBuilder().setSint64(1).build()
+            "local_epochs", Scalar.newBuilder().setSint64(1).build()
         )!!
-        val local_epochs = epoch_config.sint64.toInt()
-        val newWeights = arrayOfNulls<ByteBuffer>(nLayers)
-        for (i in 0 until nLayers) {
-            val bytes = layers[i].toByteArray()
-            newWeights[i] = ByteBuffer.wrap(bytes)
-        }
-        val outputs = train.flowerClient.fit(newWeights, local_epochs)
+        val epochs = epoch_config.sint64.toInt()
+        val newWeights = weightsFromLayers(layers)
+        train.flowerClient.updateParameters(newWeights.toTypedArray())
+        val losses = train.flowerClient.fit(epochs, lossCallback = { callback("Loss: $it.") })
+        val msg = "Training done. Losses: $losses."
+        Log.d(TAG, msg)
+        callback(msg)
         if (start != null) {
             val end = System.currentTimeMillis()
             scope.launch { train.fitInsTelemetry(start, end) }
         }
-        return fitResAsProto(outputs.first, outputs.second)
+        return fitResAsProto(weightsByteBuffers(), sampleSize)
     }
 
     @Throws
@@ -99,23 +97,26 @@ class FlowerServiceRunnable
         callback("Handling Evaluate request from the server")
         val start = if (train.telemetry) System.currentTimeMillis() else null
         val layers = message.evaluateIns.parameters.tensorsList
-        val nLayers = layers.size
-        assert(nLayers.toLong() == train.model.n_layers)
-        val newWeights = arrayOfNulls<ByteBuffer>(nLayers)
-        for (i in 0 until nLayers) {
-            val bytes = layers[i].toByteArray()
-            newWeights[i] = ByteBuffer.wrap(bytes)
-        }
-        val inference = train.flowerClient.evaluate(newWeights)
-        val loss = inference.first.first!!
-        val accuracy = inference.first.second!!
+        assert(layers.size.toLong() == train.model.n_layers)
+        val newWeights = weightsFromLayers(layers)
+        train.flowerClient.updateParameters(newWeights.toTypedArray())
+        val inference = train.flowerClient.evaluate()
+        val loss = inference.first
+        val accuracy = inference.second
         callback("Test Accuracy after this round = $accuracy")
-        val test_size = inference.second!!
         if (start != null) {
             val end = System.currentTimeMillis()
-            scope.launch { train.evaluateInsTelemetry(start, end, loss, accuracy, test_size) }
+            scope.launch { train.evaluateInsTelemetry(start, end, loss, accuracy, sampleSize) }
         }
-        return evaluateResAsProto(loss, test_size)
+        return evaluateResAsProto(loss, sampleSize)
+    }
+
+    private fun weightsByteBuffers(): Array<ByteBuffer> {
+        return train.flowerClient.weights().map { it.asReadOnlyBuffer() }.toTypedArray()
+    }
+
+    private fun weightsFromLayers(layers: List<ByteString>): List<ByteBuffer> {
+        return layers.map { ByteBuffer.wrap(it.toByteArray()) }
     }
 
     companion object {
@@ -147,7 +148,6 @@ fun fitResAsProto(weights: Array<ByteBuffer>, training_size: Int): ClientMessage
 
 fun evaluateResAsProto(accuracy: Float, testing_size: Int): ClientMessage {
     val res = ClientMessage.EvaluateRes.newBuilder().setLoss(accuracy)
-        .setNumExamples(testing_size.toLong())
-        .build()
+        .setNumExamples(testing_size.toLong()).build()
     return ClientMessage.newBuilder().setEvaluateRes(res).build()
 }

@@ -110,6 +110,7 @@ class Train constructor(
             modelDir = model.getModelDir(context)
             downloadModelFiles()
         }
+        // TODO: Return [MappedByteBuffer] instead.
         return ExternalModelLoader(modelDir)
     }
 
@@ -118,7 +119,8 @@ class Train constructor(
      */
     @Throws
     suspend fun prepare(model: TransferLearningModel, address: String, secure: Boolean) {
-        flowerClient = FlowerClient(model)
+        // TODO: Remove hardcoded file.
+        flowerClient = FlowerClient(loadMappedAssetFile(context, "cifar10.tflite"))
         val channelBuilder =
             ManagedChannelBuilder.forTarget(address).maxInboundMessageSize(HUNDRED_MEBIBYTE)
         if (!secure) {

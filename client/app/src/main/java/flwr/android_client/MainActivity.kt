@@ -105,7 +105,7 @@ class MainActivity : AppCompatActivity() {
 
     suspend fun loadDataInBackground() {
         val result = runWithStacktraceOr("Failed to load training dataset.") {
-            loadData(this, train.flowerClient.tlModel, device_id.text.toString().toInt())
+            loadData(this, train.flowerClient, device_id.text.toString().toInt())
             "Training dataset is loaded in memory. Ready to train!"
         }
         runOnUiThread {
@@ -156,19 +156,7 @@ class MainActivity : AppCompatActivity() {
         val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         train.enableTelemetry(stringToLong(deviceId))
         val modelLoader = train.prepareModelLoader(DATA_TYPE)
-        val classes = listOf(
-            "cat",
-            "dog",
-            "truck",
-            "bird",
-            "airplane",
-            "ship",
-            "frog",
-            "horse",
-            "deer",
-            "automobile"
-        )
-        val model = TransferLearningModel(modelLoader, classes)
+        val model = TransferLearningModel(modelLoader, CLASSES)
         val serverData = train.getServerInfo()
         if (serverData.port == null) {
             throw Error("Flower server port not available, status ${serverData.status}")
