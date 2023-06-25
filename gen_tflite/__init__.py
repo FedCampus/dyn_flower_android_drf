@@ -20,12 +20,15 @@ class BaseModel(tf.Module):
 
     @tf.function(input_signature=[])
     def parameters(self):
-        return [weight.read_value() for weight in self.model.weights]
+        return {
+            f"a{index}": weight.read_value()
+            for index, weight in enumerate(self.model.weights)
+        }
 
     @tf.function
     def restore(self, **parameters):
         for index, weight in enumerate(self.model.weights):
-            parameter = parameters[f"output_{index}"]
+            parameter = parameters[f"a{index}"]
             weight.assign(parameter)
         assert self.parameters is not None
         return self.parameters()
@@ -35,12 +38,8 @@ def save_model(model, saved_model_dir):
     parameters = model.parameters.get_concrete_function()
     init_params = parameters()
     print(f"Initial parameters is {init_params}.")
-    transformed_params = {
-        f"output_{index}": param for index, param in enumerate(init_params)
-    }
-    print(f"Transformed parameters is {transformed_params}.")
-    restore = model.restore.get_concrete_function(**transformed_params)
-    restore_test = restore(**transformed_params)
+    restore = model.restore.get_concrete_function(**init_params)
+    restore_test = restore(**init_params)
     print(f"Restore test result: {restore_test}.")
     tf.saved_model.save(
         model,
@@ -53,7 +52,9 @@ def save_model(model, saved_model_dir):
         },
     )
 
-    shape = f"{[param.shape.as_list() for param in init_params]}"
+    shape = (
+        f"{[param.shape.as_list() for param in parameters_from_raw_dict(init_params)]}"
+    )
     print(f"Model parameter shape: {red(shape)}.")
 
 
@@ -74,7 +75,7 @@ def parameters_from_raw_dict(raw_dict):
     parameters = []
     index = 0
     while True:
-        parameter = raw_dict.get(f"output_{index}")
+        parameter = raw_dict.get(f"a{index}")
         if parameter is None:
             break
         parameters.append(parameter)
