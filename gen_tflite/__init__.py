@@ -7,9 +7,21 @@ def red(string: str) -> str:
     return f"\033[91m{string}\033[0m"
 
 
-class BaseModel(tf.Module):
-    X_SHAPE = [1]
-    Y_SHAPE = [1]
+class BaseTFLiteModel(tf.Module):
+    """Base TFLite model class to inherit from.
+    # Usage
+    Inherent from this class and then annotate with `@tflite_model_class`.
+    Override these attributes:
+    - `X_SHAPE`: Shape of the input to the model.
+    - `Y_SHAPE`: Shape of the output from the model.
+    - `model`: A `tf.keras.Model` initialized in `__init__`.
+    # Functionality
+    Provides default implementation of `train`, `infer`, `parameters`, `restore`.
+    These methods are not annotated with `@tf.function`;
+    they are supposed to be converted by `@tflite_model_class`."""
+
+    X_SHAPE: list[int]
+    Y_SHAPE: list[int]
     model: tf.keras.Model
 
     def train(self, x, y):
@@ -18,14 +30,12 @@ class BaseModel(tf.Module):
     def infer(self, x):
         return {"logits": self.model(x)}
 
-    @tf.function(input_signature=[])
     def parameters(self):
         return {
             f"a{index}": weight.read_value()
             for index, weight in enumerate(self.model.weights)
         }
 
-    @tf.function
     def restore(self, **parameters):
         for index, weight in enumerate(self.model.weights):
             parameter = parameters[f"a{index}"]
@@ -35,19 +45,24 @@ class BaseModel(tf.Module):
 
 
 def tflite_model_class(cls):
+    """Convert `cls` that inherits from `BaseTFLiteModel` to a TFLite model class.
+    Convert `cls`'s methods using `@tf.function` with proper `input_signature`
+    according to `X_SHAPE` and `Y_SHAPE`.
+    The converted methods are `train`, `infer`, `parameters`, `restore`.
+    Only `restore`'s `input_signature is not specified because it need to be
+    determined after examples of parameters are given."""
+    cls.x_spec = tf.TensorSpec([None] + cls.X_SHAPE, tf.float32)
+    cls.y_spec = tf.TensorSpec([None] + cls.Y_SHAPE, tf.float32)
     cls.train = tf.function(
         cls.train,
-        input_signature=[
-            tf.TensorSpec([None] + cls.X_SHAPE, tf.float32),
-            tf.TensorSpec([None] + cls.Y_SHAPE, tf.float32),
-        ],
+        input_signature=[cls.x_spec, cls.y_spec],
     )
     cls.infer = tf.function(
         cls.infer,
-        input_signature=[
-            tf.TensorSpec([None] + cls.X_SHAPE, tf.float32),
-        ],
+        input_signature=[cls.x_spec],
     )
+    cls.parameters = tf.function(cls.parameters, input_signature=[])
+    cls.restore = tf.function(cls.restore)
     return cls
 
 

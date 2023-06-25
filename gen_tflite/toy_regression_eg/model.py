@@ -4,7 +4,7 @@ from .. import *
 
 
 @tflite_model_class
-class ToyRegressionModel(BaseModel):
+class ToyRegressionModel(BaseTFLiteModel):
     X_SHAPE = [2]
     Y_SHAPE = [1]
 
