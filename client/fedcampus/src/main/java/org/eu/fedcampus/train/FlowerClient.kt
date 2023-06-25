@@ -19,7 +19,11 @@ class FlowerClient(tfliteFile: MappedByteBuffer) : AutoCloseable {
     val testSamples = mutableListOf<TrainingSample>()
     val mutex = Mutex()
 
-    suspend fun addSample(bottleneck: FloatArray, label: FloatArray, isTraining: Boolean) {
+    suspend fun addSample(
+        bottleneck: Array<Array<FloatArray>>,
+        label: FloatArray,
+        isTraining: Boolean
+    ) {
         mutex.withLock {
             val samples = if (isTraining) trainingSamples else testSamples
             samples.add(TrainingSample(bottleneck, label))
@@ -27,7 +31,7 @@ class FlowerClient(tfliteFile: MappedByteBuffer) : AutoCloseable {
     }
 
     fun weights(): Array<Tensor> {
-        val inputs = mapOf<String, Any>()
+        val inputs = FakeNonEmptyMap<String, Any>()
         val outputs = mutableMapOf<String, Any>()
         interpreter.runSignature(inputs, outputs, "parameters")
         return parametersFromMap(outputs)
@@ -72,12 +76,8 @@ class FlowerClient(tfliteFile: MappedByteBuffer) : AutoCloseable {
     }
 
     private fun training(
-        bottlenecks: Array<FloatArray>, labels: Array<FloatArray>
+        bottlenecks: Array<Array<Array<FloatArray>>>, labels: Array<FloatArray>
     ): Float {
-        Log.i(
-            "Flower client training",
-            "bottlenecks: (${bottlenecks.size}, ${bottlenecks[0].size}), labels: (${labels.size}, ${labels[0].size})"
-        )
         val inputs = mapOf<String, Any>(
             "x" to bottlenecks,
             "y" to labels,
@@ -133,4 +133,16 @@ class FlowerClient(tfliteFile: MappedByteBuffer) : AutoCloseable {
     }
 }
 
-data class TrainingSample(val bottleneck: FloatArray, val label: FloatArray)
+// TODO: Make generic.
+@Suppress("ArrayInDataClass")
+data class TrainingSample(val bottleneck: Array<Array<FloatArray>>, val label: FloatArray)
+
+/**
+ * This map always returns `false` when `isEmpty` is called to bypass TFLite interpreter's
+ * stupid empty check on the `input` argument of `runSignature`.
+ */
+class FakeNonEmptyMap<K, V> : HashMap<K, V>() {
+    override fun isEmpty(): Boolean {
+        return false
+    }
+}

@@ -80,7 +80,9 @@ class FlowerServiceRunnable
         val epochs = epoch_config.sint64.toInt()
         val newWeights = weightsFromLayers(layers)
         train.flowerClient.updateParameters(newWeights.toTypedArray())
-        val losses = train.flowerClient.fit(epochs, lossCallback = { callback("Loss: $it.") })
+        val losses = train.flowerClient.fit(
+            epochs,
+            lossCallback = { callback("Average loss: ${it.average()}.") })
         val msg = "Training done. Losses: $losses."
         Log.d(TAG, msg)
         callback(msg)

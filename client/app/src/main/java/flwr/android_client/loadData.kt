@@ -52,7 +52,7 @@ private suspend fun addSample(
 ) {
     val options = BitmapFactory.Options()
     options.inPreferredConfig = Bitmap.Config.ARGB_8888
-    val bitmap = BitmapFactory.decodeStream(context.assets.open(photoPath), null, options)
+    val bitmap = BitmapFactory.decodeStream(context.assets.open(photoPath), null, options)!!
     val sampleClass = getClass(photoPath)
 
     // get rgb equivalent and class
@@ -76,19 +76,17 @@ fun getClass(path: String): String {
  * Normalizes a camera image to [0; 1], cropping it
  * to size expected by the model and adjusting for camera rotation.
  */
-private fun prepareImage(bitmap: Bitmap?): FloatArray {
-    val modelImageSize = IMAGE_SIZE
-    val normalizedRgb = FloatArray(modelImageSize * modelImageSize * 3)
-    var nextIdx = 0
-    for (y in 0 until modelImageSize) {
-        for (x in 0 until modelImageSize) {
-            val rgb = bitmap!!.getPixel(x, y)
+private fun prepareImage(bitmap: Bitmap): Array<Array<FloatArray>> {
+    val normalizedRgb = Array(IMAGE_SIZE) { Array(IMAGE_SIZE) { FloatArray(3) } }
+    for (y in 0 until IMAGE_SIZE) {
+        for (x in 0 until IMAGE_SIZE) {
+            val rgb = bitmap.getPixel(x, y)
             val r = (rgb shr 16 and LOWER_BYTE_MASK) * (1 / 255.0f)
             val g = (rgb shr 8 and LOWER_BYTE_MASK) * (1 / 255.0f)
             val b = (rgb and LOWER_BYTE_MASK) * (1 / 255.0f)
-            normalizedRgb[nextIdx++] = r
-            normalizedRgb[nextIdx++] = g
-            normalizedRgb[nextIdx++] = b
+            normalizedRgb[y][x][0] = r
+            normalizedRgb[y][x][1] = g
+            normalizedRgb[y][x][2] = b
         }
     }
     return normalizedRgb
