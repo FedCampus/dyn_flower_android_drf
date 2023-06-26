@@ -4,25 +4,24 @@ import android.util.Log
 import android.util.Pair
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.eu.fedcampus.train.db.Model
 import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.Tensor
 import java.lang.Integer.min
+import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 import java.nio.MappedByteBuffer
 
 /**
  * Construction of this class requires disk read.
  */
-class FlowerClient(tfliteFile: MappedByteBuffer) : AutoCloseable {
+class FlowerClient(tfliteFile: MappedByteBuffer, val model: Model) : AutoCloseable {
     val interpreter = Interpreter(tfliteFile)
     val trainingSamples = mutableListOf<TrainingSample>()
     val testSamples = mutableListOf<TrainingSample>()
     val mutex = Mutex()
 
     suspend fun addSample(
-        bottleneck: Array<Array<FloatArray>>,
-        label: FloatArray,
-        isTraining: Boolean
+        bottleneck: Array<Array<FloatArray>>, label: FloatArray, isTraining: Boolean
     ) {
         mutex.withLock {
             val samples = if (isTraining) trainingSamples else testSamples
@@ -30,14 +29,15 @@ class FlowerClient(tfliteFile: MappedByteBuffer) : AutoCloseable {
         }
     }
 
-    fun weights(): Array<Tensor> {
+    fun weights(): Array<ByteBuffer> {
         val inputs = FakeNonEmptyMap<String, Any>()
-        val outputs = mutableMapOf<String, Any>()
+        val outputs = emptyParameterMap()
         interpreter.runSignature(inputs, outputs, "parameters")
+        Log.i(TAG, "Raw weights: $outputs.")
         return parametersFromMap(outputs)
     }
 
-    fun updateParameters(parameters: Array<Any>): Array<Tensor> {
+    fun updateParameters(parameters: Array<ByteBuffer>): Array<ByteBuffer> {
         val outputs = mutableMapOf<String, Any>()
         interpreter.runSignature(parametersToMap(parameters), outputs, "restore")
         return parametersFromMap(outputs)
@@ -115,13 +115,19 @@ class FlowerClient(tfliteFile: MappedByteBuffer) : AutoCloseable {
         }
     }
 
-    fun parametersFromMap(map: Map<String, Any>): Array<Tensor> {
-        val length = map.size - 1
-        return (0..length).map { map["a$it"] as Tensor }.toTypedArray()
+    fun parametersFromMap(map: Map<String, Any>): Array<ByteBuffer> {
+        assert(model.n_layers == map.size.toLong())
+        return (0 until model.n_layers).map { map["a$it"] as ByteBuffer }.toTypedArray()
     }
 
-    fun parametersToMap(parameters: Array<Any>): Map<String, Any> {
-        return parameters.mapIndexed { index, tensor -> "a$index" to tensor }.toMap()
+    fun parametersToMap(parameters: Array<ByteBuffer>): Map<String, Any> {
+        assert(model.n_layers == parameters.size.toLong())
+        return parameters.mapIndexed { index, bytes -> "a$index" to bytes }.toMap()
+    }
+
+    // TODO: Use different length for each layer.
+    private fun emptyParameterMap(): Map<String, Any> {
+        return (0 until model.n_layers).map { "a$it" to ByteBuffer.allocate(1800) }.toMap()
     }
 
     companion object {

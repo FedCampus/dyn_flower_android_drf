@@ -108,7 +108,7 @@ class Train constructor(
      */
     @Throws
     suspend fun prepare(TFLiteModel: MappedByteBuffer, address: String, secure: Boolean) {
-        flowerClient = FlowerClient(TFLiteModel)
+        flowerClient = FlowerClient(TFLiteModel, model)
         val channelBuilder =
             ManagedChannelBuilder.forTarget(address).maxInboundMessageSize(HUNDRED_MEBIBYTE)
         if (!secure) {
