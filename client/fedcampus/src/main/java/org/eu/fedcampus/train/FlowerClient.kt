@@ -38,7 +38,7 @@ class FlowerClient(tfliteFile: MappedByteBuffer, val model: TFLiteModel) : AutoC
     }
 
     fun updateParameters(parameters: Array<ByteBuffer>): Array<ByteBuffer> {
-        val outputs = mutableMapOf<String, Any>()
+        val outputs = emptyParameterMap()
         interpreter.runSignature(parametersToMap(parameters), outputs, "restore")
         return parametersFromMap(outputs)
     }

@@ -114,7 +114,7 @@ class FlowerServiceRunnable
     }
 
     private fun weightsByteBuffers(): Array<ByteBuffer> {
-        return train.flowerClient.weights().map { it.asReadOnlyBuffer() }.toTypedArray()
+        return train.flowerClient.weights()
     }
 
     private fun weightsFromLayers(layers: List<ByteString>): List<ByteBuffer> {
@@ -127,9 +127,9 @@ class FlowerServiceRunnable
 }
 
 fun weightsAsProto(weights: Array<ByteBuffer>): ClientMessage {
-    val layers: MutableList<ByteString> = ArrayList()
-    for (weight in weights) {
-        layers.add(ByteString.copyFrom(weight))
+    val layers = weights.map {
+        it.rewind()
+        ByteString.copyFrom(it)
     }
     val p = Parameters.newBuilder().addAllTensors(layers).setTensorType("ND").build()
     val res = ClientMessage.GetParametersRes.newBuilder().setParameters(p).build()
