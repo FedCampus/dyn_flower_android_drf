@@ -9,9 +9,8 @@ import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 
 @Throws(IOException::class)
-fun loadMappedFile(filePath: String): MappedByteBuffer {
-    val file = File(filePath)
-    Log.i("Loading mapped file", file.toString())
+fun loadMappedFile(file: File): MappedByteBuffer {
+    Log.i("Loading mapped file", "$file")
     val accessFile = RandomAccessFile(file, "r")
     val channel = accessFile.channel
     return channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size())
@@ -24,4 +23,10 @@ fun loadMappedAssetFile(context: Context, filePath: String): MappedByteBuffer {
     val startOffset = fileDescriptor.startOffset
     val declaredLength = fileDescriptor.declaredLength
     return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
+}
+
+fun <T> assertEquals(expected: T, actual: T) {
+    if (expected != actual) {
+        throw AssertionError("Test failed: expected `$expected`, got `$actual` instead.")
+    }
 }

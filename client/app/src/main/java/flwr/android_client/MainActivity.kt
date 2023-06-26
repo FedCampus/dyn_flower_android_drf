@@ -19,7 +19,7 @@ import androidx.room.Room
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.eu.fedcampus.train.Train
-import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
+import org.eu.fedcampus.train.loadMappedFile
 import java.util.*
 
 @Suppress("DEPRECATION")
@@ -155,13 +155,12 @@ class MainActivity : AppCompatActivity() {
         train = Train(this, backendUrl, db.modelDao())
         val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         train.enableTelemetry(stringToLong(deviceId))
-        val modelLoader = train.prepareModelLoader(DATA_TYPE)
-        val model = TransferLearningModel(modelLoader, CLASSES)
+        val modelFile = train.prepareModel(DATA_TYPE)
         val serverData = train.getServerInfo()
         if (serverData.port == null) {
             throw Error("Flower server port not available, status ${serverData.status}")
         }
-        train.prepare(model, "dns:///$host:${serverData.port}", false)
+        train.prepare(loadMappedFile(modelFile), "dns:///$host:${serverData.port}", false)
         runOnUiThread {
             loadDataButton.isEnabled = true
             setResultText("Prepared for training.")

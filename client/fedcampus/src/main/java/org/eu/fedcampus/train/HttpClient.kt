@@ -35,7 +35,7 @@ class HttpClient constructor(url: String) {
     }
 
     @Throws
-    suspend fun downloadFile(url: String, parentDir: File, fileName: String) {
+    suspend fun downloadFile(url: String, parentDir: File, fileName: String): File {
         parentDir.mkdirs()
         val file = File(parentDir, fileName)
         val download = retrofit.create<DownloadFile>()
@@ -44,6 +44,7 @@ class HttpClient constructor(url: String) {
                 inputStream.copyTo(outputStream)
             }
         }
+        return file
     }
 
     interface PostServer {

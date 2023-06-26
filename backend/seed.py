@@ -9,7 +9,7 @@ m.save()
 s = TFLiteModelSerializer(m)
 assert s.data == {
     "id": 1,
-    "name": "CIFAR10_model",
+    "name": "CIFAR10",
     "file_path": file,
     "n_layers": 10,
 }

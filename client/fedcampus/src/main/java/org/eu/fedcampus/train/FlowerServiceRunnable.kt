@@ -73,7 +73,7 @@ class FlowerServiceRunnable
         callback("Handling Fit request from the server.")
         val start = if (train.telemetry) System.currentTimeMillis() else null
         val layers = message.fitIns.parameters.tensorsList
-        assert(layers.size.toLong() == train.model.n_layers)
+        assertEquals(layers.size.toLong(), train.model.n_layers)
         val epoch_config = message.fitIns.configMap.getOrDefault(
             "local_epochs", Scalar.newBuilder().setSint64(1).build()
         )!!
@@ -99,7 +99,7 @@ class FlowerServiceRunnable
         callback("Handling Evaluate request from the server")
         val start = if (train.telemetry) System.currentTimeMillis() else null
         val layers = message.evaluateIns.parameters.tensorsList
-        assert(layers.size.toLong() == train.model.n_layers)
+        assertEquals(layers.size.toLong(), train.model.n_layers)
         val newWeights = weightsFromLayers(layers)
         train.flowerClient.updateParameters(newWeights.toTypedArray())
         val inference = train.flowerClient.evaluate()
