@@ -10,17 +10,18 @@ class TrainingDataType(models.Model):
     name = models.CharField(max_length=256, unique=True, **cfg)
 
 
-# Always change together with Android `db.TFLiteModel.Model`.
+# Always change together with Android `db.TFLiteModel.TFLiteModel`.
 class TFLiteModel(models.Model):
     name = models.CharField(max_length=64, unique=True, **cfg)
     file_path = models.CharField(max_length=64, unique=True, **cfg)
-    n_layers = models.IntegerField(**cfg)
+    layers_sizes = models.JSONField(**cfg)
+    """Size of each layer of parameters in bytes."""
     data_type = models.ForeignKey(
         TrainingDataType, on_delete=models.CASCADE, related_name="tflite_models", **cfg
     )
 
     def __repr__(self) -> str:
-        return f"TFLiteModel {self.name} for {self.data_type.name} at {self.file_path}, {self.n_layers} layers"
+        return f"TFLiteModel {self.name} for {self.data_type.name} at {self.file_path}, {len(self.layers_sizes)} layers"
 
 
 class ModelParams(models.Model):

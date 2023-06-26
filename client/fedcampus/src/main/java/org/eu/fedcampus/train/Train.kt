@@ -6,8 +6,8 @@ import flwr.android_client.FlowerServiceGrpc
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.*
-import org.eu.fedcampus.train.db.Model
 import org.eu.fedcampus.train.db.ModelDao
+import org.eu.fedcampus.train.db.TFLiteModel
 import retrofit2.http.*
 import java.io.File
 import java.nio.MappedByteBuffer
@@ -30,7 +30,7 @@ class Train constructor(
     /**
      * Model to train with. Initialized after calling [advertisedModel].
      */
-    lateinit var model: Model
+    lateinit var model: TFLiteModel
     lateinit var flowerClient: FlowerClient
 
     /**
@@ -54,14 +54,14 @@ class Train constructor(
      * Download advertised model information.
      */
     @Throws
-    suspend fun advertisedModel(dataType: String): Model {
+    suspend fun advertisedModel(dataType: String): TFLiteModel {
         model = client.advertisedModel(PostAdvertisedData(dataType))
         Log.d("Model", "$model")
         return model
     }
 
     suspend fun modelDownloaded(): Boolean {
-        return modelDao?.findById(model.id)?.equals(model) ?: false
+        return modelDao?.findById(model.id)?.equals(model.toDbModel()) ?: false
     }
 
     /**
@@ -78,7 +78,7 @@ class Train constructor(
         }
         val fileDir = client.downloadFile(fileUrl, modelDir, fileName)
         Log.i(downloadModelFileTag, "$fileUrl -> ${fileDir.absolutePath}")
-        modelDao?.upsertAll(model)
+        modelDao?.upsertAll(model.toDbModel())
         return fileDir
     }
 

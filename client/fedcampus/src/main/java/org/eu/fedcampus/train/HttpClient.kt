@@ -1,7 +1,7 @@
 package org.eu.fedcampus.train
 
 import okhttp3.ResponseBody
-import org.eu.fedcampus.train.db.Model
+import org.eu.fedcampus.train.db.TFLiteModel
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.create
@@ -16,14 +16,14 @@ class HttpClient constructor(url: String) {
 
     interface Advertised {
         @POST("train/advertised")
-        suspend fun advertised(@Body body: PostAdvertisedData): Model
+        suspend fun advertised(@Body body: PostAdvertisedData): TFLiteModel
     }
 
     /**
      * Download advertised model information.
      */
     @Throws
-    suspend fun advertisedModel(body: PostAdvertisedData): Model {
+    suspend fun advertisedModel(body: PostAdvertisedData): TFLiteModel {
         val advertised = retrofit.create<Advertised>()
         return advertised.advertised(body)
     }
@@ -53,7 +53,7 @@ class HttpClient constructor(url: String) {
     }
 
     @Throws
-    suspend fun postServer(model: Model): ServerData {
+    suspend fun postServer(model: TFLiteModel): ServerData {
         val body = PostServerData(model.id)
         val postServer = retrofit.create<PostServer>()
         return postServer.postServer(body)

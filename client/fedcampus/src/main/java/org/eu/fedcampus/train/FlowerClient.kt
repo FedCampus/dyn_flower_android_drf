@@ -4,7 +4,7 @@ import android.util.Log
 import android.util.Pair
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.eu.fedcampus.train.db.Model
+import org.eu.fedcampus.train.db.TFLiteModel
 import org.tensorflow.lite.Interpreter
 import java.lang.Integer.min
 import java.nio.ByteBuffer
@@ -14,7 +14,7 @@ import java.nio.MappedByteBuffer
 /**
  * Construction of this class requires disk read.
  */
-class FlowerClient(tfliteFile: MappedByteBuffer, val model: Model) : AutoCloseable {
+class FlowerClient(tfliteFile: MappedByteBuffer, val model: TFLiteModel) : AutoCloseable {
     val interpreter = Interpreter(tfliteFile)
     val trainingSamples = mutableListOf<TrainingSample>()
     val testSamples = mutableListOf<TrainingSample>()
@@ -116,18 +116,18 @@ class FlowerClient(tfliteFile: MappedByteBuffer, val model: Model) : AutoCloseab
     }
 
     fun parametersFromMap(map: Map<String, Any>): Array<ByteBuffer> {
-        assert(model.n_layers == map.size.toLong())
-        return (0 until model.n_layers).map { map["a$it"] as ByteBuffer }.toTypedArray()
+        assertIntsEqual(model.layers_sizes.size, map.size)
+        return (0 until map.size).map { map["a$it"] as ByteBuffer }.toTypedArray()
     }
 
     fun parametersToMap(parameters: Array<ByteBuffer>): Map<String, Any> {
-        assert(model.n_layers == parameters.size.toLong())
+        assertIntsEqual(model.layers_sizes.size, parameters.size)
         return parameters.mapIndexed { index, bytes -> "a$index" to bytes }.toMap()
     }
 
-    // TODO: Use different length for each layer.
     private fun emptyParameterMap(): Map<String, Any> {
-        return (0 until model.n_layers).map { "a$it" to ByteBuffer.allocate(1800) }.toMap()
+        return model.layers_sizes.mapIndexed { index, size -> "a$index" to ByteBuffer.allocate(size) }
+            .toMap()
     }
 
     companion object {

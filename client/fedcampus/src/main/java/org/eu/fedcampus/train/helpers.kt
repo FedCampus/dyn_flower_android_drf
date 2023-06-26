@@ -25,7 +25,7 @@ fun loadMappedAssetFile(context: Context, filePath: String): MappedByteBuffer {
     return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
 }
 
-fun <T> assertEquals(expected: T, actual: T) {
+fun assertIntsEqual(expected: Int, actual: Int) {
     if (expected != actual) {
         throw AssertionError("Test failed: expected `$expected`, got `$actual` instead.")
     }
