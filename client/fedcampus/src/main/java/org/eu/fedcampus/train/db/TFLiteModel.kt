@@ -9,29 +9,12 @@ import java.io.File
 data class Model(
     @PrimaryKey val id: Long,
     @ColumnInfo val name: String,
+    @ColumnInfo val file_path: String,
     @ColumnInfo val n_layers: Long,
-    @field:TypeConverters(TFLiteFilesConverter::class)
-    @ColumnInfo val tflite_files: List<String>
 ) {
     @Throws
     fun getModelDir(context: Context): File {
         return context.getExternalFilesDir("models/$name/")!!
-    }
-}
-
-class TFLiteFilesConverter {
-    @TypeConverter
-    fun fromList(list: List<String>): String {
-        return list.joinToString(DELIMITER)
-    }
-
-    @TypeConverter
-    fun toList(string: String): List<String> {
-        return string.split(DELIMITER)
-    }
-
-    companion object {
-        const val DELIMITER = ":"
     }
 }
 
