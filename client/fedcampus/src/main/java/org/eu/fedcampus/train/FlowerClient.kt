@@ -14,18 +14,19 @@ import java.nio.MappedByteBuffer
 /**
  * Construction of this class requires disk read.
  */
-class FlowerClient<Y>(
+class FlowerClient<X, Y>(
     tfliteFile: MappedByteBuffer,
     val model: TFLiteModel,
-    val convertY: (List<Y>) -> Array<Y>
+    val convertX: (List<X>) -> Array<X>,
+    val convertY: (List<Y>) -> Array<Y>,
 ) : AutoCloseable {
     val interpreter = Interpreter(tfliteFile)
-    val trainingSamples = mutableListOf<TrainingSample<Y>>()
-    val testSamples = mutableListOf<TrainingSample<Y>>()
+    val trainingSamples = mutableListOf<TrainingSample<X, Y>>()
+    val testSamples = mutableListOf<TrainingSample<X, Y>>()
     val mutex = Mutex()
 
     suspend fun addSample(
-        bottleneck: Array<Array<FloatArray>>, label: Y, isTraining: Boolean
+        bottleneck: X, label: Y, isTraining: Boolean
     ) {
         mutex.withLock {
             val samples = if (isTraining) trainingSamples else testSamples
@@ -80,9 +81,9 @@ class FlowerClient<Y>(
 
         trainingSamples.shuffle()
         return trainingBatches(min(batchSize, trainingSamples.size)).map {
-            val bottlenecks = it.map { sample -> sample.bottleneck }.toTypedArray()
+            val bottlenecks = it.map { sample -> sample.bottleneck }
             val labels = it.map { sample -> sample.label }
-            training(bottlenecks, convertY(labels))
+            training(convertX(bottlenecks), convertY(labels))
         }.toList()
     }
 
@@ -90,7 +91,7 @@ class FlowerClient<Y>(
      * Not thread-safe.
      */
     private fun training(
-        bottlenecks: Array<Array<Array<FloatArray>>>, labels: Array<Y>
+        bottlenecks: Array<X>, labels: Array<Y>
     ): Float {
         val inputs = mapOf<String, Any>(
             "x" to bottlenecks,
@@ -108,7 +109,7 @@ class FlowerClient<Y>(
     /**
      * Constructs an iterator that iterates over training sample batches.
      */
-    private fun trainingBatches(trainBatchSize: Int): Sequence<List<TrainingSample<Y>>> {
+    private fun trainingBatches(trainBatchSize: Int): Sequence<List<TrainingSample<X, Y>>> {
         return sequence {
             var nextIndex = 0
 
@@ -157,9 +158,7 @@ class FlowerClient<Y>(
     }
 }
 
-// TODO: Make generic.
-@Suppress("ArrayInDataClass")
-data class TrainingSample<Y>(val bottleneck: Array<Array<FloatArray>>, val label: Y)
+data class TrainingSample<X, Y>(val bottleneck: X, val label: Y)
 
 /**
  * This map always returns `false` when `isEmpty` is called to bypass TFLite interpreter's

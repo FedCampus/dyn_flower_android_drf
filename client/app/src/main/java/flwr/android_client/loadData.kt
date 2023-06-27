@@ -28,7 +28,11 @@ suspend fun readAssetLines(
  * Load training data from disk.
  */
 @Throws
-suspend fun loadData(context: Context, flowerClient: FlowerClient<FloatArray>, device_id: Int) {
+suspend fun loadData(
+    context: Context,
+    flowerClient: FlowerClient<Float3DArray, FloatArray>,
+    device_id: Int
+) {
     readAssetLines(context, "data/partition_${device_id - 1}_train.txt") { index, line ->
         if (index % 500 == 499) {
             Log.i(TAG, index.toString() + "th training image loaded")
@@ -46,7 +50,7 @@ suspend fun loadData(context: Context, flowerClient: FlowerClient<FloatArray>, d
 @Throws
 private suspend fun addSample(
     context: Context,
-    flowerClient: FlowerClient<FloatArray>,
+    flowerClient: FlowerClient<Float3DArray, FloatArray>,
     photoPath: String,
     isTraining: Boolean
 ) {
@@ -76,7 +80,7 @@ fun getClass(path: String): String {
  * Normalizes a camera image to [0; 1], cropping it
  * to size expected by the model and adjusting for camera rotation.
  */
-private fun prepareImage(bitmap: Bitmap): Array<Array<FloatArray>> {
+private fun prepareImage(bitmap: Bitmap): Float3DArray {
     val normalizedRgb = Array(IMAGE_SIZE) { Array(IMAGE_SIZE) { FloatArray(3) } }
     for (y in 0 until IMAGE_SIZE) {
         for (x in 0 until IMAGE_SIZE) {

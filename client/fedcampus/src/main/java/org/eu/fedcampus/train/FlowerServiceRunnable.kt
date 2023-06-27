@@ -14,13 +14,13 @@ import kotlinx.coroutines.runBlocking
 import java.nio.ByteBuffer
 import java.util.concurrent.CountDownLatch
 
-class FlowerServiceRunnable<Y>
+class FlowerServiceRunnable<X, Y>
 /**
  * Start communication with Flower server and training in the background.
  */
 @Throws constructor(
     asyncStub: FlowerServiceGrpc.FlowerServiceStub,
-    val train: Train<Y>,
+    val train: Train<X, Y>,
     val callback: (String) -> Unit
 ) {
     private val scope = MainScope()

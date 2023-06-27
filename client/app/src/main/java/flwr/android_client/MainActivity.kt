@@ -25,7 +25,7 @@ import java.util.*
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
     private val scope = MainScope()
-    lateinit var train: Train<FloatArray>
+    lateinit var train: Train<Float3DArray, FloatArray>
     private lateinit var ip: EditText
     private lateinit var port: EditText
     private lateinit var loadDataButton: Button
@@ -159,7 +159,7 @@ class MainActivity : AppCompatActivity() {
     suspend fun connectInBackground(host: String, port: Int) {
         val backendUrl = "http://$host:$port"
         Log.i(TAG, "Backend URL: $backendUrl")
-        train = Train(this, backendUrl, { it.toTypedArray() }, db.modelDao())
+        train = Train(this, backendUrl, { it.toTypedArray() }, { it.toTypedArray() }, db.modelDao())
         val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         train.enableTelemetry(stringToLong(deviceId))
         val modelFile = train.prepareModel(DATA_TYPE)
@@ -207,3 +207,5 @@ class MainActivity : AppCompatActivity() {
 
 private const val TAG = "MainActivity"
 private const val DATA_TYPE = "CIFAR10_32x32x3"
+
+typealias Float3DArray = Array<Array<FloatArray>>
