@@ -2,7 +2,7 @@
 
 ## Set up
 
-Download the training and testing data from <https://docs.djangoproject.com/en/4.2/howto/deployment/> and extract them to `app/src/main/assets/data`.
+Download the training and testing data from <https://www.dropbox.com/s/coeixr4kh8ljw6o/cifar10.zip?dl=1> and extract them to `app/src/main/assets/data`.
 
 ## Run the demo
 
