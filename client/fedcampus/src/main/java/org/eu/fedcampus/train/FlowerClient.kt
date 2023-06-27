@@ -37,22 +37,26 @@ class FlowerClient(tfliteFile: MappedByteBuffer, val model: TFLiteModel) : AutoC
         return parametersFromMap(outputs)
     }
 
-    fun updateParameters(parameters: Array<ByteBuffer>): Array<ByteBuffer> {
+    suspend fun updateParameters(parameters: Array<ByteBuffer>): Array<ByteBuffer> {
         val outputs = emptyParameterMap()
-        interpreter.runSignature(parametersToMap(parameters), outputs, "restore")
+        mutex.withLock {
+            interpreter.runSignature(parametersToMap(parameters), outputs, "restore")
+        }
         return parametersFromMap(outputs)
     }
 
-    fun fit(
+    suspend fun fit(
         epochs: Int = 1, batchSize: Int = 32, lossCallback: ((List<Float>) -> Unit)? = null
     ): List<Double> {
         Log.d(TAG, "Starting to train for $epochs epochs with batch size $batchSize.")
-        return (1..epochs).map {
-            val losses = trainOneEpoch(batchSize)
-            val avgLoss = losses.average()
-            Log.d(TAG, "Epoch $it: average loss = $avgLoss.")
-            lossCallback?.invoke(losses)
-            avgLoss
+        return mutex.withLock {
+            (1..epochs).map {
+                val losses = trainOneEpoch(batchSize)
+                val avgLoss = losses.average()
+                Log.d(TAG, "Epoch $it: average loss = $avgLoss.")
+                lossCallback?.invoke(losses)
+                avgLoss
+            }
         }
     }
 
@@ -61,6 +65,9 @@ class FlowerClient(tfliteFile: MappedByteBuffer, val model: TFLiteModel) : AutoC
         return Pair(0f, 0f)
     }
 
+    /**
+     * Not thread-safe.
+     */
     private fun trainOneEpoch(batchSize: Int): List<Float> {
         if (trainingSamples.isEmpty()) {
             Log.d(TAG, "No training samples available.")
@@ -75,6 +82,9 @@ class FlowerClient(tfliteFile: MappedByteBuffer, val model: TFLiteModel) : AutoC
         }.toList()
     }
 
+    /**
+     * Not thread-safe.
+     */
     private fun training(
         bottlenecks: Array<Array<Array<FloatArray>>>, labels: Array<FloatArray>
     ): Float {
