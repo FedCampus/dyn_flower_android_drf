@@ -25,7 +25,7 @@ import java.util.*
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
     private val scope = MainScope()
-    lateinit var train: Train
+    lateinit var train: Train<FloatArray>
     private lateinit var ip: EditText
     private lateinit var port: EditText
     private lateinit var loadDataButton: Button
@@ -98,7 +98,14 @@ class MainActivity : AppCompatActivity() {
                 loadDataInBackground()
             }
             scope.launch {
-                db.inputDao().upsertAll(inputFromEditText(device_id, ip, port))
+                db.inputDao().upsertAll(
+                    Input(
+                        1,
+                        device_id.text.toString(),
+                        ip.text.toString(),
+                        port.text.toString()
+                    )
+                )
             }
         }
     }
@@ -152,7 +159,7 @@ class MainActivity : AppCompatActivity() {
     suspend fun connectInBackground(host: String, port: Int) {
         val backendUrl = "http://$host:$port"
         Log.i(TAG, "Backend URL: $backendUrl")
-        train = Train(this, backendUrl, db.modelDao())
+        train = Train(this, backendUrl, { it.toTypedArray() }, db.modelDao())
         val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         train.enableTelemetry(stringToLong(deviceId))
         val modelFile = train.prepareModel(DATA_TYPE)

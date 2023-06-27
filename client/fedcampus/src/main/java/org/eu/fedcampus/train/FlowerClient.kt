@@ -14,14 +14,18 @@ import java.nio.MappedByteBuffer
 /**
  * Construction of this class requires disk read.
  */
-class FlowerClient(tfliteFile: MappedByteBuffer, val model: TFLiteModel) : AutoCloseable {
+class FlowerClient<Y>(
+    tfliteFile: MappedByteBuffer,
+    val model: TFLiteModel,
+    val convertY: (List<Y>) -> Array<Y>
+) : AutoCloseable {
     val interpreter = Interpreter(tfliteFile)
-    val trainingSamples = mutableListOf<TrainingSample>()
-    val testSamples = mutableListOf<TrainingSample>()
+    val trainingSamples = mutableListOf<TrainingSample<Y>>()
+    val testSamples = mutableListOf<TrainingSample<Y>>()
     val mutex = Mutex()
 
     suspend fun addSample(
-        bottleneck: Array<Array<FloatArray>>, label: FloatArray, isTraining: Boolean
+        bottleneck: Array<Array<FloatArray>>, label: Y, isTraining: Boolean
     ) {
         mutex.withLock {
             val samples = if (isTraining) trainingSamples else testSamples
@@ -77,8 +81,8 @@ class FlowerClient(tfliteFile: MappedByteBuffer, val model: TFLiteModel) : AutoC
         trainingSamples.shuffle()
         return trainingBatches(min(batchSize, trainingSamples.size)).map {
             val bottlenecks = it.map { sample -> sample.bottleneck }.toTypedArray()
-            val labels = it.map { sample -> sample.label }.toTypedArray()
-            training(bottlenecks, labels)
+            val labels = it.map { sample -> sample.label }
+            training(bottlenecks, convertY(labels))
         }.toList()
     }
 
@@ -86,7 +90,7 @@ class FlowerClient(tfliteFile: MappedByteBuffer, val model: TFLiteModel) : AutoC
      * Not thread-safe.
      */
     private fun training(
-        bottlenecks: Array<Array<Array<FloatArray>>>, labels: Array<FloatArray>
+        bottlenecks: Array<Array<Array<FloatArray>>>, labels: Array<Y>
     ): Float {
         val inputs = mapOf<String, Any>(
             "x" to bottlenecks,
@@ -104,7 +108,7 @@ class FlowerClient(tfliteFile: MappedByteBuffer, val model: TFLiteModel) : AutoC
     /**
      * Constructs an iterator that iterates over training sample batches.
      */
-    private fun trainingBatches(trainBatchSize: Int): Sequence<List<TrainingSample>> {
+    private fun trainingBatches(trainBatchSize: Int): Sequence<List<TrainingSample<Y>>> {
         return sequence {
             var nextIndex = 0
 
@@ -155,7 +159,7 @@ class FlowerClient(tfliteFile: MappedByteBuffer, val model: TFLiteModel) : AutoC
 
 // TODO: Make generic.
 @Suppress("ArrayInDataClass")
-data class TrainingSample(val bottleneck: Array<Array<FloatArray>>, val label: FloatArray)
+data class TrainingSample<Y>(val bottleneck: Array<Array<FloatArray>>, val label: Y)
 
 /**
  * This map always returns `false` when `isEmpty` is called to bypass TFLite interpreter's

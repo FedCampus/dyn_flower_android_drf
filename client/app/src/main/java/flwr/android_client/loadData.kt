@@ -28,7 +28,7 @@ suspend fun readAssetLines(
  * Load training data from disk.
  */
 @Throws
-suspend fun loadData(context: Context, flowerClient: FlowerClient, device_id: Int) {
+suspend fun loadData(context: Context, flowerClient: FlowerClient<FloatArray>, device_id: Int) {
     readAssetLines(context, "data/partition_${device_id - 1}_train.txt") { index, line ->
         if (index % 500 == 499) {
             Log.i(TAG, index.toString() + "th training image loaded")
@@ -46,7 +46,7 @@ suspend fun loadData(context: Context, flowerClient: FlowerClient, device_id: In
 @Throws
 private suspend fun addSample(
     context: Context,
-    flowerClient: FlowerClient,
+    flowerClient: FlowerClient<FloatArray>,
     photoPath: String,
     isTraining: Boolean
 ) {

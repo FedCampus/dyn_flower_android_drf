@@ -13,9 +13,10 @@ import java.io.File
 import java.nio.MappedByteBuffer
 import kotlin.properties.Delegates
 
-class Train constructor(
+class Train<Y> constructor(
     val context: Context,
     backendUrl: String,
+    val convertY: (List<Y>) -> Array<Y>,
     val modelDao: ModelDao? = null
 ) {
     var sessionId: Int? = null
@@ -31,12 +32,12 @@ class Train constructor(
      * Model to train with. Initialized after calling [advertisedModel].
      */
     lateinit var model: TFLiteModel
-    lateinit var flowerClient: FlowerClient
+    lateinit var flowerClient: FlowerClient<Y>
 
     /**
      * Communication and training instance. Initialized after calling [start].
      */
-    lateinit var flowerServiceRunnable: FlowerServiceRunnable
+    lateinit var flowerServiceRunnable: FlowerServiceRunnable<Y>
 
 
     fun enableTelemetry(id: Long) {
@@ -108,7 +109,7 @@ class Train constructor(
      */
     @Throws
     suspend fun prepare(TFLiteModel: MappedByteBuffer, address: String, secure: Boolean) {
-        flowerClient = FlowerClient(TFLiteModel, model)
+        flowerClient = FlowerClient(TFLiteModel, model, convertY)
         val channelBuilder =
             ManagedChannelBuilder.forTarget(address).maxInboundMessageSize(HUNDRED_MEBIBYTE)
         if (!secure) {
