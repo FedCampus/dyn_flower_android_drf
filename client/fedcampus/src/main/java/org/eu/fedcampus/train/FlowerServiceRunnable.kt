@@ -80,12 +80,9 @@ class FlowerServiceRunnable
         val epochs = epoch_config.sint64.toInt()
         val newWeights = weightsFromLayers(layers)
         train.flowerClient.updateParameters(newWeights.toTypedArray())
-        val losses = train.flowerClient.fit(
+        train.flowerClient.fit(
             epochs,
             lossCallback = { callback("Average loss: ${it.average()}.") })
-        val msg = "Training done. Losses: $losses."
-        Log.d(TAG, msg)
-        callback(msg)
         if (start != null) {
             val end = System.currentTimeMillis()
             scope.launch { train.fitInsTelemetry(start, end) }
@@ -127,10 +124,7 @@ class FlowerServiceRunnable
 }
 
 fun weightsAsProto(weights: Array<ByteBuffer>): ClientMessage {
-    val layers = weights.map {
-        it.rewind()
-        ByteString.copyFrom(it)
-    }
+    val layers = weights.map { ByteString.copyFrom(it) }
     val p = Parameters.newBuilder().addAllTensors(layers).setTensorType("ND").build()
     val res = ClientMessage.GetParametersRes.newBuilder().setParameters(p).build()
     return ClientMessage.newBuilder().setGetParametersRes(res).build()

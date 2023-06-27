@@ -117,7 +117,11 @@ class FlowerClient(tfliteFile: MappedByteBuffer, val model: TFLiteModel) : AutoC
 
     fun parametersFromMap(map: Map<String, Any>): Array<ByteBuffer> {
         assertIntsEqual(model.layers_sizes.size, map.size)
-        return (0 until map.size).map { map["a$it"] as ByteBuffer }.toTypedArray()
+        return (0 until map.size).map {
+            val buffer = map["a$it"] as ByteBuffer
+            buffer.rewind()
+            buffer
+        }.toTypedArray()
     }
 
     fun parametersToMap(parameters: Array<ByteBuffer>): Map<String, Any> {
