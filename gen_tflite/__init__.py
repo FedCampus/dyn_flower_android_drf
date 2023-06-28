@@ -84,10 +84,14 @@ def save_model(model, saved_model_dir):
         },
     )
 
-    shape = (
-        f"{[param.shape.as_list() for param in parameters_from_raw_dict(init_params)]}"
-    )
+    converted_params = [
+        param.numpy() for param in parameters_from_raw_dict(init_params)
+    ]
+    shape = f"{[list(param.shape) for param in converted_params]}"
     print(f"Model parameter shape: {red(shape)}.")
+    byte_sizes = f"{[param.size * param.itemsize for param in converted_params]}"
+    print(f"Model parameter sizes in bytes: {red(byte_sizes)}.")
+    return converted_params
 
 
 def convert_saved_model(saved_model_dir):
