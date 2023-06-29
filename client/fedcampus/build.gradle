@@ -33,7 +33,13 @@ android {
 def grpc_version = '1.43.0'
 
 protobuf {
-    protoc { artifact = 'com.google.protobuf:protoc:3.11.0' }
+    protoc {
+        if (osdetector.os == "osx") {
+            artifact = 'com.google.protobuf:protoc:3.11.4:osx-x86_64'
+        } else {
+            artifact = 'com.google.protobuf:protoc:3.11.4'
+        }
+    }
     plugins {
         grpc {
             artifact = "io.grpc:protoc-gen-grpc-java:$grpc_version"
