@@ -36,6 +36,7 @@ infix fun <T, R> Iterable<T>.lazyZip(other: Array<out R>): Sequence<Pair<T, R>> 
     }
 }
 
+@Throws(AssertionError::class)
 fun assertIntsEqual(expected: Int, actual: Int) {
     if (expected != actual) {
         throw AssertionError("Test failed: expected `$expected`, got `$actual` instead.")
