@@ -48,7 +48,7 @@ suspend fun loadData(
 }
 
 @Throws
-private suspend fun addSample(
+private fun addSample(
     context: Context,
     flowerClient: FlowerClient<Float3DArray, FloatArray>,
     photoPath: String,

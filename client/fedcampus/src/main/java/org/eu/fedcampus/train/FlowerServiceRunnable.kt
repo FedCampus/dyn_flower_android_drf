@@ -10,7 +10,6 @@ import flwr.android_client.ServerMessage
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.nio.ByteBuffer
 import java.util.concurrent.CountDownLatch
 
@@ -82,12 +81,10 @@ class FlowerServiceRunnable<X, Y>
         )!!
         val epochs = epoch_config.sint64.toInt()
         val newWeights = weightsFromLayers(layers)
-        runBlocking {
-            train.flowerClient.updateParameters(newWeights.toTypedArray())
-            train.flowerClient.fit(
-                epochs,
-                lossCallback = { callback("Average loss: ${it.average()}.") })
-        }
+        train.flowerClient.updateParameters(newWeights.toTypedArray())
+        train.flowerClient.fit(
+            epochs,
+            lossCallback = { callback("Average loss: ${it.average()}.") })
         if (start != null) {
             val end = System.currentTimeMillis()
             scope.launch { train.fitInsTelemetry(start, end) }
@@ -103,10 +100,8 @@ class FlowerServiceRunnable<X, Y>
         val layers = message.evaluateIns.parameters.tensorsList
         assertIntsEqual(layers.size, train.model.layers_sizes.size)
         val newWeights = weightsFromLayers(layers)
-        val inference = runBlocking {
-            train.flowerClient.updateParameters(newWeights.toTypedArray())
-            train.flowerClient.evaluate()
-        }
+        train.flowerClient.updateParameters(newWeights.toTypedArray())
+        val inference = train.flowerClient.evaluate()
         val loss = inference.first
         val accuracy = inference.second
         callback("Test Accuracy after this round = $accuracy")

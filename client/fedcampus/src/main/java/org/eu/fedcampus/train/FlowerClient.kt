@@ -2,14 +2,15 @@ package org.eu.fedcampus.train
 
 import android.util.Log
 import android.util.Pair
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.eu.fedcampus.train.db.TFLiteModel
 import org.tensorflow.lite.Interpreter
 import java.lang.Integer.min
 import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 import java.nio.MappedByteBuffer
+import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.withLock
 
 /**
  * Construction of this class requires disk read.
@@ -21,40 +22,48 @@ class FlowerClient<X, Y>(
     val convertY: (List<Y>) -> Array<Y>,
 ) : AutoCloseable {
     val interpreter = Interpreter(tfliteFile)
+    val interpreterLock = ReentrantLock()
     val trainingSamples = mutableListOf<TrainingSample<X, Y>>()
     val testSamples = mutableListOf<TrainingSample<X, Y>>()
-    val mutex = Mutex()
+    val trainSampleLock = ReentrantReadWriteLock()
+    val testSampleLock = ReentrantReadWriteLock()
 
-    suspend fun addSample(
+    /**
+     * Thread-safe.
+     */
+    fun addSample(
         bottleneck: X, label: Y, isTraining: Boolean
     ) {
-        mutex.withLock {
-            val samples = if (isTraining) trainingSamples else testSamples
+        val samples = if (isTraining) trainingSamples else testSamples
+        val lock = if (isTraining) trainSampleLock else testSampleLock
+        lock.writeLock().withLock {
             samples.add(TrainingSample(bottleneck, label))
         }
     }
 
     fun weights(): Array<ByteBuffer> {
-        val inputs = FakeNonEmptyMap<String, Any>()
+        val inputs: Map<String, Any> = FakeNonEmptyMap()
         val outputs = emptyParameterMap()
-        interpreter.runSignature(inputs, outputs, "parameters")
+        runSignatureLocked(inputs, outputs, "parameters")
         Log.i(TAG, "Raw weights: $outputs.")
         return parametersFromMap(outputs)
     }
 
-    suspend fun updateParameters(parameters: Array<ByteBuffer>): Array<ByteBuffer> {
+    fun updateParameters(parameters: Array<ByteBuffer>): Array<ByteBuffer> {
         val outputs = emptyParameterMap()
-        mutex.withLock {
-            interpreter.runSignature(parametersToMap(parameters), outputs, "restore")
-        }
+        runSignatureLocked(parametersToMap(parameters), outputs, "restore")
         return parametersFromMap(outputs)
     }
 
-    suspend fun fit(
+    /**
+     * Thread-safe, and block operations on [trainingSamples].
+     */
+    fun fit(
         epochs: Int = 1, batchSize: Int = 32, lossCallback: ((List<Float>) -> Unit)? = null
     ): List<Double> {
         Log.d(TAG, "Starting to train for $epochs epochs with batch size $batchSize.")
-        return mutex.withLock {
+        // Obtain write lock to prevent training samples from being modified.
+        return trainSampleLock.writeLock().withLock {
             (1..epochs).map {
                 val losses = trainOneEpoch(batchSize)
                 val avgLoss = losses.average()
@@ -88,7 +97,7 @@ class FlowerClient<X, Y>(
     }
 
     /**
-     * Not thread-safe.
+     * Not thread-safe because we assume [trainSampleLock] is already acquired.
      */
     private fun training(
         bottlenecks: Array<X>, labels: Array<Y>
@@ -101,7 +110,7 @@ class FlowerClient<X, Y>(
         val outputs = mapOf<String, Any>(
             "loss" to loss,
         )
-        interpreter.runSignature(inputs, outputs, "train")
+        runSignatureLocked(inputs, outputs, "train")
         return loss.get(0)
     }
 
@@ -142,6 +151,16 @@ class FlowerClient<X, Y>(
     fun parametersToMap(parameters: Array<ByteBuffer>): Map<String, Any> {
         assertIntsEqual(model.layers_sizes.size, parameters.size)
         return parameters.mapIndexed { index, bytes -> "a$index" to bytes }.toMap()
+    }
+
+    private fun runSignatureLocked(
+        inputs: Map<String, Any>,
+        outputs: Map<String, Any>,
+        signatureKey: String
+    ) {
+        interpreterLock.withLock {
+            interpreter.runSignature(inputs, outputs, signatureKey)
+        }
     }
 
     private fun emptyParameterMap(): Map<String, Any> {
