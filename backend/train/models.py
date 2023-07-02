@@ -20,7 +20,7 @@ class TFLiteModel(models.Model):
         TrainingDataType, on_delete=models.CASCADE, related_name="tflite_models", **cfg
     )
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"TFLiteModel {self.name} for {self.data_type.name} at {self.file_path}, {len(self.layers_sizes)} layers"
 
 
@@ -35,7 +35,7 @@ class ModelParams(models.Model):
     def decode_params(self) -> list[NDArray]:
         return loads(self.params)
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"ModelParams for {self.tflite_model.name}: {self.decode_params()}"
 
 
