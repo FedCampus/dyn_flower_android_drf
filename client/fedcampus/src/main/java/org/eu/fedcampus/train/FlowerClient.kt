@@ -15,7 +15,7 @@ import kotlin.concurrent.withLock
 /**
  * Construction of this class requires disk read.
  */
-class FlowerClient<X, Y>(
+class FlowerClient<X : Any, Y : Any>(
     tfliteFile: MappedByteBuffer,
     val model: TFLiteModel,
     val convertX: (List<X>) -> Array<X>,
@@ -23,8 +23,8 @@ class FlowerClient<X, Y>(
 ) : AutoCloseable {
     val interpreter = Interpreter(tfliteFile)
     val interpreterLock = ReentrantLock()
-    val trainingSamples = mutableListOf<TrainingSample<X, Y>>()
-    val testSamples = mutableListOf<TrainingSample<X, Y>>()
+    val trainingSamples = mutableListOf<Sample<X, Y>>()
+    val testSamples = mutableListOf<Sample<X, Y>>()
     val trainSampleLock = ReentrantReadWriteLock()
     val testSampleLock = ReentrantReadWriteLock()
 
@@ -37,7 +37,7 @@ class FlowerClient<X, Y>(
         val samples = if (isTraining) trainingSamples else testSamples
         val lock = if (isTraining) trainSampleLock else testSampleLock
         lock.writeLock().withLock {
-            samples.add(TrainingSample(bottleneck, label))
+            samples.add(Sample(bottleneck, label))
         }
     }
 
@@ -80,6 +80,15 @@ class FlowerClient<X, Y>(
     }
 
     /**
+     * [logits] is the pre-allocated output.
+     */
+    fun inference(x: X, logits: Y) {
+        val inputs = mapOf("x" to x)
+        val outputs = mapOf("logits" to logits)
+        runSignatureLocked(inputs, outputs, "infer")
+    }
+
+    /**
      * Not thread-safe.
      */
     private fun trainOneEpoch(batchSize: Int): List<Float> {
@@ -118,7 +127,7 @@ class FlowerClient<X, Y>(
     /**
      * Constructs an iterator that iterates over training sample batches.
      */
-    private fun trainingBatches(trainBatchSize: Int): Sequence<List<TrainingSample<X, Y>>> {
+    private fun trainingBatches(trainBatchSize: Int): Sequence<List<Sample<X, Y>>> {
         return sequence {
             var nextIndex = 0
 
@@ -177,7 +186,7 @@ class FlowerClient<X, Y>(
     }
 }
 
-data class TrainingSample<X, Y>(val bottleneck: X, val label: Y)
+data class Sample<X, Y>(val bottleneck: X, val label: Y)
 
 /**
  * This map always returns `false` when `isEmpty` is called to bypass TFLite interpreter's
