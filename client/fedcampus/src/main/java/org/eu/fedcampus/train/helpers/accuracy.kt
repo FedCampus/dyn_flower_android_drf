@@ -1,4 +1,6 @@
-package org.eu.fedcampus.train
+package org.eu.fedcampus.train.helpers
+
+import org.eu.fedcampus.train.Sample
 
 fun <X> classifierAccuracy(
     samples: MutableList<Sample<X, FloatArray>>,

@@ -10,6 +10,7 @@ import flwr.android_client.ServerMessage
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import org.eu.fedcampus.train.helpers.assertIntsEqual
 import java.nio.ByteBuffer
 import java.util.concurrent.CountDownLatch
 

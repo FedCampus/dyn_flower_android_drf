@@ -1,4 +1,4 @@
-package org.eu.fedcampus.train
+package org.eu.fedcampus.train.helpers
 
 import android.content.Context
 import android.util.Log

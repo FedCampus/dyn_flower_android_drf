@@ -20,9 +20,9 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.eu.fedcampus.train.SampleSpec
 import org.eu.fedcampus.train.Train
-import org.eu.fedcampus.train.classifierAccuracy
-import org.eu.fedcampus.train.loadMappedFile
-import org.eu.fedcampus.train.negativeLogLikelihoodLoss
+import org.eu.fedcampus.train.helpers.classifierAccuracy
+import org.eu.fedcampus.train.helpers.loadMappedFile
+import org.eu.fedcampus.train.helpers.negativeLogLikelihoodLoss
 import java.util.*
 
 @Suppress("DEPRECATION")
