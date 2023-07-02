@@ -78,13 +78,12 @@ class FlowerClient<X : Any, Y : Any>(
         return Pair(0f, 0f)
     }
 
-    /**
-     * [logits] is the pre-allocated output.
-     */
-    fun inference(x: X, logits: Y) {
+    fun inference(x: X): Y {
         val inputs = mapOf("x" to x)
+        val logits = spec.emptyY()
         val outputs = mapOf("logits" to logits)
         runSignatureLocked(inputs, outputs, "infer")
+        return logits
     }
 
     /**

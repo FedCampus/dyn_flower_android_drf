@@ -160,8 +160,11 @@ class MainActivity : AppCompatActivity() {
     suspend fun connectInBackground(host: String, port: Int) {
         val backendUrl = "http://$host:$port"
         Log.i(TAG, "Backend URL: $backendUrl")
-        val sampleSpec =
-            SampleSpec<Float3DArray, FloatArray>({ it.toTypedArray() }, { it.toTypedArray() })
+        val sampleSpec = SampleSpec<Float3DArray, FloatArray>(
+            { it.toTypedArray() },
+            { it.toTypedArray() },
+            { FloatArray(CLASSES.size) }
+        )
         train = Train(this, backendUrl, sampleSpec, db.modelDao())
         val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         train.enableTelemetry(stringToLong(deviceId))
