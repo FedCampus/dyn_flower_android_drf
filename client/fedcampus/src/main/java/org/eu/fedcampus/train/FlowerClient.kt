@@ -11,6 +11,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.withLock
+import kotlin.concurrent.write
 
 /**
  * Construction of this class requires disk read.
@@ -35,7 +36,7 @@ class FlowerClient<X : Any, Y : Any>(
     ) {
         val samples = if (isTraining) trainingSamples else testSamples
         val lock = if (isTraining) trainSampleLock else testSampleLock
-        lock.writeLock().withLock {
+        lock.write {
             samples.add(Sample(bottleneck, label))
         }
     }
@@ -62,7 +63,7 @@ class FlowerClient<X : Any, Y : Any>(
     ): List<Double> {
         Log.d(TAG, "Starting to train for $epochs epochs with batch size $batchSize.")
         // Obtain write lock to prevent training samples from being modified.
-        return trainSampleLock.writeLock().withLock {
+        return trainSampleLock.write {
             (1..epochs).map {
                 val losses = trainOneEpoch(batchSize)
                 val avgLoss = losses.average()
