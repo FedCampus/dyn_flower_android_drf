@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.room.Room
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import org.eu.fedcampus.train.SampleSpec
 import org.eu.fedcampus.train.Train
 import org.eu.fedcampus.train.loadMappedFile
 import java.util.*
@@ -159,7 +160,9 @@ class MainActivity : AppCompatActivity() {
     suspend fun connectInBackground(host: String, port: Int) {
         val backendUrl = "http://$host:$port"
         Log.i(TAG, "Backend URL: $backendUrl")
-        train = Train(this, backendUrl, { it.toTypedArray() }, { it.toTypedArray() }, db.modelDao())
+        val sampleSpec =
+            SampleSpec<Float3DArray, FloatArray>({ it.toTypedArray() }, { it.toTypedArray() })
+        train = Train(this, backendUrl, sampleSpec, db.modelDao())
         val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         train.enableTelemetry(stringToLong(deviceId))
         val modelFile = train.prepareModel(DATA_TYPE)

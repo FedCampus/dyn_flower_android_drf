@@ -13,11 +13,10 @@ import java.io.File
 import java.nio.MappedByteBuffer
 import kotlin.properties.Delegates
 
-class Train<X, Y> constructor(
+class Train<X : Any, Y : Any> constructor(
     val context: Context,
     backendUrl: String,
-    val convertX: (List<X>) -> Array<X>,
-    val convertY: (List<Y>) -> Array<Y>,
+    val sampleSpec: SampleSpec<X, Y>,
     val modelDao: ModelDao? = null
 ) {
     var sessionId: Int? = null
@@ -110,7 +109,7 @@ class Train<X, Y> constructor(
      */
     @Throws
     suspend fun prepare(TFLiteModel: MappedByteBuffer, address: String, secure: Boolean) {
-        flowerClient = FlowerClient(TFLiteModel, model, convertX, convertY)
+        flowerClient = FlowerClient(TFLiteModel, model, sampleSpec)
         val channelBuilder =
             ManagedChannelBuilder.forTarget(address).maxInboundMessageSize(HUNDRED_MEBIBYTE)
         if (!secure) {

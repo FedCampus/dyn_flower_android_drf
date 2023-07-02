@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.util.concurrent.CountDownLatch
 
-class FlowerServiceRunnable<X, Y>
+class FlowerServiceRunnable<X : Any, Y : Any>
 /**
  * Start communication with Flower server and training in the background.
  */

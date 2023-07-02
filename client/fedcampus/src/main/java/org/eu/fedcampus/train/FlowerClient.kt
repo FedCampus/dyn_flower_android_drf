@@ -18,8 +18,7 @@ import kotlin.concurrent.withLock
 class FlowerClient<X : Any, Y : Any>(
     tfliteFile: MappedByteBuffer,
     val model: TFLiteModel,
-    val convertX: (List<X>) -> Array<X>,
-    val convertY: (List<Y>) -> Array<Y>,
+    val spec: SampleSpec<X, Y>,
 ) : AutoCloseable {
     val interpreter = Interpreter(tfliteFile)
     val interpreterLock = ReentrantLock()
@@ -101,7 +100,7 @@ class FlowerClient<X : Any, Y : Any>(
         return trainingBatches(min(batchSize, trainingSamples.size)).map {
             val bottlenecks = it.map { sample -> sample.bottleneck }
             val labels = it.map { sample -> sample.label }
-            training(convertX(bottlenecks), convertY(labels))
+            training(spec.convertX(bottlenecks), spec.convertY(labels))
         }.toList()
     }
 
