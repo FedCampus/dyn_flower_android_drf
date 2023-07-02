@@ -1,7 +1,6 @@
 package org.eu.fedcampus.train
 
 import android.util.Log
-import android.util.Pair
 import org.eu.fedcampus.train.db.TFLiteModel
 import org.tensorflow.lite.Interpreter
 import java.lang.Integer.min
@@ -10,6 +9,7 @@ import java.nio.FloatBuffer
 import java.nio.MappedByteBuffer
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.read
 import kotlin.concurrent.withLock
 
 /**
@@ -74,13 +74,18 @@ class FlowerClient<X : Any, Y : Any>(
     }
 
     fun evaluate(): Pair<Float, Float> {
-        // TODO: Return test loss and accuracy. Reference [TransferLearningModel.getTestStatistics].
-        return Pair(0f, 0f)
+        val result = testSampleLock.read {
+            val bottlenecks = testSamples.map { it.bottleneck }
+            val logits = inference(spec.convertX(bottlenecks))
+            spec.loss(testSamples, logits) to spec.accuracy(testSamples, logits)
+        }
+        Log.d(TAG, "Evaluate loss & accuracy: $result.")
+        return result
     }
 
-    fun inference(x: X): Y {
+    fun inference(x: Array<X>): Array<Y> {
         val inputs = mapOf("x" to x)
-        val logits = spec.emptyY()
+        val logits = spec.emptyY(x.size)
         val outputs = mapOf("logits" to logits)
         runSignatureLocked(inputs, outputs, "infer")
         return logits

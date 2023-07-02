@@ -20,7 +20,9 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.eu.fedcampus.train.SampleSpec
 import org.eu.fedcampus.train.Train
+import org.eu.fedcampus.train.classifierAccuracy
 import org.eu.fedcampus.train.loadMappedFile
+import org.eu.fedcampus.train.negativeLogLikelihoodLoss
 import java.util.*
 
 @Suppress("DEPRECATION")
@@ -163,7 +165,9 @@ class MainActivity : AppCompatActivity() {
         val sampleSpec = SampleSpec<Float3DArray, FloatArray>(
             { it.toTypedArray() },
             { it.toTypedArray() },
-            { FloatArray(CLASSES.size) }
+            { Array(it) { FloatArray(CLASSES.size) } },
+            ::negativeLogLikelihoodLoss,
+            ::classifierAccuracy,
         )
         train = Train(this, backendUrl, sampleSpec, db.modelDao())
         val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)

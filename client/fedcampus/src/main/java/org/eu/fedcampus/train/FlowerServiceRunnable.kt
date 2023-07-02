@@ -101,9 +101,7 @@ class FlowerServiceRunnable<X : Any, Y : Any>
         assertIntsEqual(layers.size, train.model.layers_sizes.size)
         val newWeights = weightsFromLayers(layers)
         train.flowerClient.updateParameters(newWeights.toTypedArray())
-        val inference = train.flowerClient.evaluate()
-        val loss = inference.first
-        val accuracy = inference.second
+        val (loss, accuracy) = train.flowerClient.evaluate()
         callback("Test Accuracy after this round = $accuracy")
         if (start != null) {
             val end = System.currentTimeMillis()
