@@ -67,10 +67,9 @@ class FlowerClient<X : Any, Y : Any>(
         return trainSampleLock.write {
             (1..epochs).map {
                 val losses = trainOneEpoch(batchSize)
-                val avgLoss = losses.average()
-                Log.d(TAG, "Epoch $it: average loss = $avgLoss.")
+                Log.d(TAG, "Epoch $it: losses = $losses.")
                 lossCallback?.invoke(losses)
-                avgLoss
+                losses.average()
             }
         }
     }
