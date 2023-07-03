@@ -6,10 +6,8 @@ import kotlin.math.ln
 fun <X> negativeLogLikelihoodLoss(
     samples: MutableList<Sample<X, FloatArray>>,
     logits: Array<FloatArray>
-): Float {
-    return averageLossWith(samples, logits) { sample, logit ->
-        -ln(logit[sample.label.argmax()])
-    }
+): Float = averageLossWith(samples, logits) { sample, logit ->
+    -ln(logit[sample.label.argmax()])
 }
 
 fun <X, Y> averageLossWith(
