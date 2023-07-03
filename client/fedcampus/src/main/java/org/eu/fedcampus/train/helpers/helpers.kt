@@ -36,6 +36,8 @@ infix fun <T, R> Iterable<T>.lazyZip(other: Array<out R>): Sequence<Pair<T, R>> 
     }
 }
 
+fun FloatArray.argmax(): Int = indices.maxBy { this[it] }
+
 @Throws(AssertionError::class)
 fun assertIntsEqual(expected: Int, actual: Int) {
     if (expected != actual) {

@@ -8,7 +8,7 @@ fun <X> negativeLogLikelihoodLoss(
     logits: Array<FloatArray>
 ): Float {
     return averageLossWith(samples, logits) { sample, logit ->
-        -ln(logit[sample.label.indices.maxBy { sample.label[it] }])
+        -ln(logit[sample.label.argmax()])
     }
 }
 

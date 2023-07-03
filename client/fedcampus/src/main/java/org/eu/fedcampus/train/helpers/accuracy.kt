@@ -7,6 +7,6 @@ fun <X> classifierAccuracy(
     logits: Array<FloatArray>
 ): Float {
     return averageLossWith(samples, logits) { sample, logit ->
-        sample.label[logit.indices.maxBy { logit[it] }]
+        sample.label[logit.argmax()]
     }
 }
