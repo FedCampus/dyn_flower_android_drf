@@ -9,5 +9,6 @@ RUN python3 -m pip install uwsgi
 RUN python3 /app/manage.py migrate
 
 ENV PRODUCTION true
+ENV PRODUCTION_ARGUMENT "--socket backend.sock"
 
 CMD sh /app/run.sh
