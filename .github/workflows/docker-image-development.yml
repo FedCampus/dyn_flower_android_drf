@@ -28,7 +28,8 @@ jobs:
         with:
           images: fedcampus/dyn_flower_android_drf
           flavor: |
-            latest=true
+            latest=false
+            prefix="Dev"
           tags: |
             type=sha
       
@@ -36,7 +37,7 @@ jobs:
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
         with:
           context: ./backend
-          file: ./backend/Dockerfile
+          file: ./backend/Dockerfile.dev
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
