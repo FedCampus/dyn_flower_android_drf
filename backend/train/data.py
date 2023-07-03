@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 
-# Always change together with Android `Train.ServerData`.
+# Always change together with Android `HttpClient.ServerData`.
 @dataclass
 class ServerData:
     status: str

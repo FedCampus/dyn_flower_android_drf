@@ -11,3 +11,9 @@ class TFLiteModelSerializer(serializers.Serializer):
     class Meta:
         model = TFLiteModel
         fields = ["id", "name", "file_path", "layers_sizes"]
+
+
+# Always change together with Android `HttpClient.PostServerData`.
+class PostServerDataSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    start_fresh = serializers.BooleanField(required=False, default=False)  # type: ignore

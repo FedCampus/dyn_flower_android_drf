@@ -55,9 +55,10 @@ TWELVE_HOURS = 12 * 60 * 60
 class Server:
     """Spawn a new background Flower server process and monitor it."""
 
-    def __init__(self, model: TFLiteModel) -> None:
+    def __init__(self, model: TFLiteModel, start_fresh: bool) -> None:
         self.model = model
-        params = model_params(model)
+        self.start_fresh = start_fresh
+        params = None if start_fresh else model_params(model)
         db_conn, self.db_conn = Pipe()
         self.session = TrainingSession(tflite_model=model)
         self.process = Process(target=flwr_server, args=(db_conn, params))
@@ -82,7 +83,7 @@ def cleanup_task():
         task = None
 
 
-def server(model: TFLiteModel) -> ServerData:
+def server(model: TFLiteModel, start_fresh: bool) -> ServerData:
     """Request a Flower server. Return `(status, port)`.
     `status` is "started" if the server is already running,
     "new" if newly started,
@@ -91,10 +92,12 @@ def server(model: TFLiteModel) -> ServerData:
     cleanup_task()
     if task:
         if task.model == model:
+            if start_fresh and not task.start_fresh:
+                return ServerData("started_non_fresh", task.session.id, None)
             return ServerData("started", task.session.id, PORT)
         else:
             return ServerData("occupied", None, None)
     else:
         # Start new server.
-        task = Server(model)
+        task = Server(model, start_fresh)
         return ServerData("new", task.session.id, PORT)

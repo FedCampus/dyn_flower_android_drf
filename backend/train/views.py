@@ -1,4 +1,5 @@
 import logging
+from typing import OrderedDict
 
 from rest_framework import permissions
 from rest_framework.decorators import api_view, permission_classes
@@ -7,7 +8,7 @@ from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 from rest_framework.views import Request
 from train.models import TFLiteModel, TrainingDataType
 from train.scheduler import server
-from train.serializers import TFLiteModelSerializer
+from train.serializers import *
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +41,15 @@ def advertise_model(request):
 @api_view(["POST"])
 @permission_classes((permissions.AllowAny,))
 def request_server(request: Request):
-    id = request.data.get("id")  # type: ignore
-    if id is None:
-        return Response("Model ID not specified", HTTP_400_BAD_REQUEST)
+    serializer = PostServerDataSerializer(data=request.data)  # type: ignore
+    if not serializer.is_valid():
+        logger.error(serializer.errors)
+        return Response(serializer.errors, HTTP_400_BAD_REQUEST)
+    data: OrderedDict = serializer.validated_data  # type: ignore
     try:
-        model = TFLiteModel.objects.get(pk=id)
+        model = TFLiteModel.objects.get(pk=data["id"])
     except TFLiteModel.DoesNotExist:
+        logger.error(f"Model with id {data['id']} not found.")
         return Response("Model not found", HTTP_404_NOT_FOUND)
-    data = server(model)
-    return Response(data.__dict__)
+    response = server(model, data["start_fresh"])
+    return Response(response.__dict__)
