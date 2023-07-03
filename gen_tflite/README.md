@@ -10,6 +10,8 @@ For example implementations, check out `cifar10_eg/` and `toy_regression_eg/`.
 python3 -m pip install -r requirements.txt
 ```
 
+Please ignore `./pyproject.toml`.
+
 ## Model declaration
 
 Inherit from `BaseTFLiteModel`, annotate with `@tflite_model_class`, and override `X_SHAPE`, `Y_SHAPE`, and `__init__` to assign `self.model`.
@@ -83,14 +85,4 @@ For validation, see the `toy_regression_eg/` example.
 
 ## Running demo
 
-To run `cifar10_eg/`, at `..`, run:
-
-```sh
-python3 -m gen_tflite.cifar10_eg.run
-```
-
-To run `toy_regression_eg/`, at `..`, run:
-
-```sh
-python3 -m gen_tflite.toy_regression_eg.run
-```
+Please see `cifar10_eg/README.md` and `toy_regression_eg/README.md`.
