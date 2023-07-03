@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.room.Room
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import org.eu.fedcampus.train.FlowerClient
 import org.eu.fedcampus.train.SampleSpec
 import org.eu.fedcampus.train.Train
 import org.eu.fedcampus.train.helpers.classifierAccuracy
@@ -29,6 +30,7 @@ import java.util.*
 class MainActivity : AppCompatActivity() {
     private val scope = MainScope()
     lateinit var train: Train<Float3DArray, FloatArray>
+    lateinit var flowerClient: FlowerClient<Float3DArray, FloatArray>
     private lateinit var ip: EditText
     private lateinit var port: EditText
     private lateinit var loadDataButton: Button
@@ -115,7 +117,7 @@ class MainActivity : AppCompatActivity() {
 
     suspend fun loadDataInBackground() {
         val result = runWithStacktraceOr("Failed to load training dataset.") {
-            loadData(this, train.flowerClient, device_id.text.toString().toInt())
+            loadData(this, flowerClient, device_id.text.toString().toInt())
             "Training dataset is loaded in memory. Ready to train!"
         }
         runOnUiThread {
@@ -177,7 +179,8 @@ class MainActivity : AppCompatActivity() {
         if (serverData.port == null) {
             throw Error("Flower server port not available, status ${serverData.status}")
         }
-        train.prepare(loadMappedFile(modelFile), "dns:///$host:${serverData.port}", false)
+        flowerClient =
+            train.prepare(loadMappedFile(modelFile), "dns:///$host:${serverData.port}", false)
         runOnUiThread {
             loadDataButton.isEnabled = true
             setResultText("Prepared for training.")

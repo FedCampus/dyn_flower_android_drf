@@ -10,6 +10,7 @@ import flwr.android_client.ServerMessage
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import org.eu.fedcampus.train.db.TFLiteModel
 import org.eu.fedcampus.train.helpers.assertIntsEqual
 import java.nio.ByteBuffer
 import java.util.concurrent.CountDownLatch
@@ -21,11 +22,13 @@ class FlowerServiceRunnable<X : Any, Y : Any>
 @Throws constructor(
     asyncStub: FlowerServiceGrpc.FlowerServiceStub,
     val train: Train<X, Y>,
+    val model: TFLiteModel,
+    val flowerClient: FlowerClient<X, Y>,
     val callback: (String) -> Unit
 ) {
     private val scope = MainScope()
     private val sampleSize: Int
-        get() = train.flowerClient.trainingSamples.size
+        get() = flowerClient.trainingSamples.size
     val finishLatch = CountDownLatch(1)
     val requestObserver = asyncStub.join(object : StreamObserver<ServerMessage> {
         override fun onNext(msg: ServerMessage) {
@@ -76,14 +79,14 @@ class FlowerServiceRunnable<X : Any, Y : Any>
         callback("Handling Fit request from the server.")
         val start = if (train.telemetry) System.currentTimeMillis() else null
         val layers = message.fitIns.parameters.tensorsList
-        assertIntsEqual(layers.size, train.model.layers_sizes.size)
+        assertIntsEqual(layers.size, model.layers_sizes.size)
         val epoch_config = message.fitIns.configMap.getOrDefault(
             "local_epochs", Scalar.newBuilder().setSint64(1).build()
         )!!
         val epochs = epoch_config.sint64.toInt()
         val newWeights = weightsFromLayers(layers)
-        train.flowerClient.updateParameters(newWeights.toTypedArray())
-        train.flowerClient.fit(
+        flowerClient.updateParameters(newWeights.toTypedArray())
+        flowerClient.fit(
             epochs,
             lossCallback = { callback("Average loss: ${it.average()}.") })
         if (start != null) {
@@ -99,10 +102,10 @@ class FlowerServiceRunnable<X : Any, Y : Any>
         callback("Handling Evaluate request from the server")
         val start = if (train.telemetry) System.currentTimeMillis() else null
         val layers = message.evaluateIns.parameters.tensorsList
-        assertIntsEqual(layers.size, train.model.layers_sizes.size)
+        assertIntsEqual(layers.size, model.layers_sizes.size)
         val newWeights = weightsFromLayers(layers)
-        train.flowerClient.updateParameters(newWeights.toTypedArray())
-        val (loss, accuracy) = train.flowerClient.evaluate()
+        flowerClient.updateParameters(newWeights.toTypedArray())
+        val (loss, accuracy) = flowerClient.evaluate()
         callback("Test Accuracy after this round = $accuracy")
         if (start != null) {
             val end = System.currentTimeMillis()
@@ -112,7 +115,7 @@ class FlowerServiceRunnable<X : Any, Y : Any>
     }
 
     private fun weightsByteBuffers(): Array<ByteBuffer> {
-        return train.flowerClient.weights()
+        return flowerClient.weights()
     }
 
     private fun weightsFromLayers(layers: List<ByteString>): List<ByteBuffer> {

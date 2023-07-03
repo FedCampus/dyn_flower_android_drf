@@ -24,21 +24,8 @@ class Train<X : Any, Y : Any> constructor(
         private set
     var deviceId by Delegates.notNull<Long>()
         private set
-    lateinit var channel: ManagedChannel
     val client = HttpClient(backendUrl)
-
-
-    /**
-     * Model to train with. Initialized after calling [advertisedModel].
-     */
-    lateinit var model: TFLiteModel
-    lateinit var flowerClient: FlowerClient<X, Y>
-
-    /**
-     * Communication and training instance. Initialized after calling [start].
-     */
-    lateinit var flowerServiceRunnable: FlowerServiceRunnable<X, Y>
-
+    var state: TrainState<X, Y> = TrainState.Initialized()
 
     fun enableTelemetry(id: Long) {
         deviceId = id
@@ -55,13 +42,20 @@ class Train<X : Any, Y : Any> constructor(
      * Download advertised model information.
      */
     @Throws
-    suspend fun advertisedModel(dataType: String): TFLiteModel {
-        model = client.advertisedModel(PostAdvertisedData(dataType))
+    suspend fun advertisedModel(dataType: String): TFLiteModel = when (state) {
+        is TrainState.Initialized, is TrainState.WithModel -> doAdvertisedModel(dataType)
+        else -> throw IllegalStateException("`advertisedModel` called with $state")
+    }
+
+    private suspend fun doAdvertisedModel(dataType: String): TFLiteModel {
+        val model = client.advertisedModel(PostAdvertisedData(dataType))
         Log.d("Model", "$model")
+        state = TrainState.WithModel(model)
         return model
     }
 
-    suspend fun modelDownloaded(): Boolean {
+    @Throws
+    suspend fun modelDownloaded(model: TFLiteModel): Boolean {
         return modelDao?.findById(model.id)?.equals(model.toDbModel()) ?: false
     }
 
@@ -69,10 +63,16 @@ class Train<X : Any, Y : Any> constructor(
      * Download TFLite files to `"models/$path"` if they have not been saved to DB.
      */
     @Throws
-    suspend fun downloadModelFile(modelDir: File): File {
+    suspend fun downloadModelFile(modelDir: File): File = when (state) {
+        is TrainState.WithModel -> doDownloadModelFile(modelDir)
+        else -> throw IllegalStateException("`downloadModelFile` called with $state")
+    }
+
+    private suspend fun doDownloadModelFile(modelDir: File): File {
+        val model = state.model
         val fileUrl = model.file_path
         val fileName = fileUrl.split("/").last()
-        if (modelDownloaded()) {
+        if (modelDownloaded(model)) {
             // The model is already in the DB
             Log.i(downloadModelFileTag, "skipping already downloaded model ${model.name}")
             return File(modelDir, fileName)
@@ -84,7 +84,12 @@ class Train<X : Any, Y : Any> constructor(
     }
 
     @Throws
-    suspend fun getServerInfo(): ServerData {
+    suspend fun getServerInfo(): ServerData = when (state) {
+        is TrainState.WithModel -> doGetServerInfo(state.model)
+        else -> throw IllegalStateException("`getServerInfo` called with $state")
+    }
+
+    private suspend fun doGetServerInfo(model: TFLiteModel): ServerData {
         val serverData = client.postServer(model)
         sessionId = serverData.session_id
         Log.i("Server data", "$serverData")
@@ -92,41 +97,69 @@ class Train<X : Any, Y : Any> constructor(
     }
 
     /**
-     * Ask backend for advertised model, initialize [model], and download its corresponding file.
+     * Ask backend for advertised model, load model into [state], and download its corresponding file.
      * @return Model file.
      */
     @Throws
-    suspend fun prepareModel(dataType: String): File {
-        return withContext(Dispatchers.IO) {
-            advertisedModel(dataType)
+    suspend fun prepareModel(dataType: String): File = when (state) {
+        is TrainState.Initialized, is TrainState.WithModel -> doPrepareModel(dataType)
+        else -> throw IllegalStateException("`prepareModel` called with $state")
+    }
+
+    private suspend fun doPrepareModel(dataType: String) =
+        withContext(Dispatchers.IO) {
+            val model = advertisedModel(dataType)
             val modelDir = model.getModelDir(context)
             downloadModelFile(modelDir)
         }
-    }
 
     /**
-     * Initialize [flowerClient] with [TFLiteModel] and establish [channel] connection to Flower server.
+     * Initialize Flower Client with TFLite model [buffer] and establish channel connection to Flower server.
      */
     @Throws
-    suspend fun prepare(TFLiteModel: MappedByteBuffer, address: String, secure: Boolean) {
-        flowerClient = FlowerClient(TFLiteModel, model, sampleSpec)
+    suspend fun prepare(buffer: MappedByteBuffer, address: String, secure: Boolean) = when (state) {
+        is TrainState.WithModel -> doPrepare(buffer, address, secure, state.model)
+        else -> throw IllegalStateException("`prepare` called with $state")
+    }
+
+    private suspend fun doPrepare(
+        buffer: MappedByteBuffer,
+        address: String,
+        secure: Boolean,
+        model: TFLiteModel
+    ): FlowerClient<X, Y> {
+        val flowerClient = FlowerClient(buffer, model, sampleSpec)
         val channelBuilder =
             ManagedChannelBuilder.forTarget(address).maxInboundMessageSize(HUNDRED_MEBIBYTE)
         if (!secure) {
             channelBuilder.usePlaintext()
         }
-        withContext(Dispatchers.IO) {
-            channel = channelBuilder.build()
+        val channel = withContext(Dispatchers.IO) {
+            channelBuilder.build()
         }
+        state = TrainState.Prepared(model, flowerClient, channel)
+        return flowerClient
     }
 
     /**
-     * Only call this after loading training data into [flowerClient].
+     * Only call this after loading training data into the Flower Client.
      */
     @Throws
-    fun start(callback: (String) -> Unit) {
-        flowerServiceRunnable =
-            FlowerServiceRunnable(FlowerServiceGrpc.newStub(channel), this, callback)
+    fun start(callback: (String) -> Unit) = when (state) {
+        is TrainState.Prepared -> doStart(callback, state.model, state.flowerClient, state.channel)
+        else -> throw IllegalStateException("`start` called with $state")
+    }
+
+    private fun doStart(
+        callback: (String) -> Unit,
+        model: TFLiteModel,
+        flowerClient: FlowerClient<X, Y>,
+        channel: ManagedChannel
+    ) {
+        val service = FlowerServiceGrpc.newStub(channel)
+        val flowerServiceRunnable =
+            FlowerServiceRunnable(service, this, model, flowerClient, callback)
+        state = TrainState.Training(model, flowerClient, flowerServiceRunnable)
     }
 
     /**
