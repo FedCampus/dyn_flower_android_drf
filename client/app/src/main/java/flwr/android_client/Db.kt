@@ -1,15 +1,10 @@
 package flwr.android_client
 
-import android.widget.EditText
 import androidx.room.*
 import org.eu.fedcampus.train.db.Model
 import org.eu.fedcampus.train.db.ModelDao
 
-@Database(
-    entities = [Model::class, Input::class],
-    version = 2,
-    autoMigrations = [AutoMigration(1, 2)]
-)
+@Database(entities = [Model::class, Input::class], version = 1, autoMigrations = [])
 abstract class Db : RoomDatabase() {
     abstract fun modelDao(): ModelDao
     abstract fun inputDao(): InputDao
@@ -22,15 +17,6 @@ data class Input(
     @ColumnInfo val ip: String,
     @ColumnInfo val port: String
 )
-
-fun inputFromEditText(deviceIdText: EditText, ipEditText: EditText, portEditText: EditText): Input {
-    return Input(
-        1,
-        deviceIdText.text.toString(),
-        ipEditText.text.toString(),
-        portEditText.text.toString()
-    )
-}
 
 @Dao
 interface InputDao {

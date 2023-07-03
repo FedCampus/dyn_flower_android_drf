@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "2170f9b9dfce8ce054e7691ee05c0a4e",
+    "identityHash": "4e5fe14ad518ee84a738d92b501b7e00",
     "entities": [
       {
         "tableName": "Model",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `n_layers` INTEGER NOT NULL, `tflite_files` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `file_path` TEXT NOT NULL, `n_layers` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -21,14 +21,52 @@
             "notNull": true
           },
           {
+            "fieldPath": "file_path",
+            "columnName": "file_path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
             "fieldPath": "n_layers",
             "columnName": "n_layers",
             "affinity": "INTEGER",
             "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "Input",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `device_id` TEXT NOT NULL, `ip` TEXT NOT NULL, `port` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
           },
           {
-            "fieldPath": "tflite_files",
-            "columnName": "tflite_files",
+            "fieldPath": "device_id",
+            "columnName": "device_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ip",
+            "columnName": "ip",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "port",
+            "columnName": "port",
             "affinity": "TEXT",
             "notNull": true
           }
@@ -46,7 +84,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2170f9b9dfce8ce054e7691ee05c0a4e')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4e5fe14ad518ee84a738d92b501b7e00')"
     ]
   }
 }

@@ -1,2 +1,2 @@
-include ':app', ':transfer_api'
+include ':app'
 include ':FedCampus'

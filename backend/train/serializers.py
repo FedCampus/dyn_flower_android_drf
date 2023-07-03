@@ -5,9 +5,9 @@ from train.models import TFLiteModel
 class TFLiteModelSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
-    n_layers = serializers.IntegerField()
-    tflite_files = serializers.StringRelatedField(many=True)
+    file_path = serializers.CharField()
+    layers_sizes = serializers.ListField()
 
     class Meta:
         model = TFLiteModel
-        fields = ["id", "name", "n_layers", "tflite_files"]
+        fields = ["id", "name", "file_path", "layers_sizes"]

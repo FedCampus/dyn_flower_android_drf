@@ -6,17 +6,17 @@ import flwr.android_client.FlowerServiceGrpc
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.*
-import org.eu.fedcampus.train.db.Model
 import org.eu.fedcampus.train.db.ModelDao
-import org.tensorflow.lite.examples.transfer.api.ExternalModelLoader
-import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
+import org.eu.fedcampus.train.db.TFLiteModel
 import retrofit2.http.*
 import java.io.File
+import java.nio.MappedByteBuffer
 import kotlin.properties.Delegates
 
-class Train constructor(
+class Train<X : Any, Y : Any> constructor(
     val context: Context,
     backendUrl: String,
+    val sampleSpec: SampleSpec<X, Y>,
     val modelDao: ModelDao? = null
 ) {
     var sessionId: Int? = null
@@ -31,14 +31,13 @@ class Train constructor(
     /**
      * Model to train with. Initialized after calling [advertisedModel].
      */
-    lateinit var model: Model
-    lateinit var modelDir: File
-    lateinit var flowerClient: FlowerClient
+    lateinit var model: TFLiteModel
+    lateinit var flowerClient: FlowerClient<X, Y>
 
     /**
      * Communication and training instance. Initialized after calling [start].
      */
-    lateinit var flowerServiceRunnable: FlowerServiceRunnable
+    lateinit var flowerServiceRunnable: FlowerServiceRunnable<X, Y>
 
 
     fun enableTelemetry(id: Long) {
@@ -56,39 +55,32 @@ class Train constructor(
      * Download advertised model information.
      */
     @Throws
-    suspend fun advertisedModel(dataType: String): Model {
+    suspend fun advertisedModel(dataType: String): TFLiteModel {
         model = client.advertisedModel(PostAdvertisedData(dataType))
         Log.d("Model", "$model")
         return model
     }
 
     suspend fun modelDownloaded(): Boolean {
-        return modelDao?.findById(model.id)?.equals(model) ?: false
+        return modelDao?.findById(model.id)?.equals(model.toDbModel()) ?: false
     }
 
     /**
      * Download TFLite files to `"models/$path"` if they have not been saved to DB.
      */
     @Throws
-    suspend fun downloadModelFiles() {
+    suspend fun downloadModelFile(modelDir: File): File {
+        val fileUrl = model.file_path
+        val fileName = fileUrl.split("/").last()
         if (modelDownloaded()) {
             // The model is already in the DB
-            Log.i("downloadModelFiles", "skipping already downloaded model ${model.name}")
-            return
+            Log.i(downloadModelFileTag, "skipping already downloaded model ${model.name}")
+            return File(modelDir, fileName)
         }
-        val scope = CoroutineScope(Job())
-        val downloadTasks = mutableListOf<Deferred<Unit>>()
-        for (fileUrl in model.tflite_files) {
-            val task = scope.async {
-                val fileName = fileUrl.split("/").last()
-                Log.i("Download TFLite model", "$fileUrl -> ${modelDir.absolutePath}$fileName")
-                client.downloadFile(fileUrl, modelDir, fileName)
-            }
-            downloadTasks.add(task)
-        }
-        downloadTasks.awaitAll()
-        Log.i("Downloaded TFLite model", "at models/${model.name}/")
-        modelDao?.upsertAll(model)
+        val fileDir = client.downloadFile(fileUrl, modelDir, fileName)
+        Log.i(downloadModelFileTag, "$fileUrl -> ${fileDir.absolutePath}")
+        modelDao?.upsertAll(model.toDbModel())
+        return fileDir
     }
 
     @Throws
@@ -100,25 +92,24 @@ class Train constructor(
     }
 
     /**
-     * Ask backend for advertised model, download its files, and ask backend for Flower server.
-     * @return Model loader.
+     * Ask backend for advertised model, initialize [model], and download its corresponding file.
+     * @return Model file.
      */
     @Throws
-    suspend fun prepareModelLoader(dataType: String): ExternalModelLoader {
-        withContext(Dispatchers.IO) {
+    suspend fun prepareModel(dataType: String): File {
+        return withContext(Dispatchers.IO) {
             advertisedModel(dataType)
-            modelDir = model.getModelDir(context)
-            downloadModelFiles()
+            val modelDir = model.getModelDir(context)
+            downloadModelFile(modelDir)
         }
-        return ExternalModelLoader(modelDir)
     }
 
     /**
-     * Load [model] into Flower client and establish connection to Flower server.
+     * Initialize [flowerClient] with [TFLiteModel] and establish [channel] connection to Flower server.
      */
     @Throws
-    suspend fun prepare(model: TransferLearningModel, address: String, secure: Boolean) {
-        flowerClient = FlowerClient(model)
+    suspend fun prepare(TFLiteModel: MappedByteBuffer, address: String, secure: Boolean) {
+        flowerClient = FlowerClient(TFLiteModel, model, sampleSpec)
         val channelBuilder =
             ManagedChannelBuilder.forTarget(address).maxInboundMessageSize(HUNDRED_MEBIBYTE)
         if (!secure) {
@@ -130,7 +121,7 @@ class Train constructor(
     }
 
     /**
-     * Only call this after loading training data into `flowerClient.tlModel`.
+     * Only call this after loading training data into [flowerClient].
      */
     @Throws
     fun start(callback: (String) -> Unit) {
@@ -172,3 +163,4 @@ class Train constructor(
 }
 
 const val HUNDRED_MEBIBYTE = 100 * 1024 * 1024
+const val downloadModelFileTag = "Download TFLite model"

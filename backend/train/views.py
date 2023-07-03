@@ -32,7 +32,7 @@ def advertise_model(request):
     data_type = request.data.get("data_type")
     model = model_for_data_type(data_type)
     if model is None:
-        model = TFLiteModel.objects.last()
+        return Response("No model corresponding to data_type", HTTP_404_NOT_FOUND)
     serializer = TFLiteModelSerializer(model)
     return Response(serializer.data)
 

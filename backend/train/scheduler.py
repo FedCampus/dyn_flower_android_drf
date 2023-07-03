@@ -3,10 +3,9 @@ from multiprocessing import Pipe, Process
 from threading import Thread
 
 from flwr.common import Parameters
-from numpy import array, single
 from telemetry.models import TrainingSession
 from train.data import ServerData
-from train.models import ModelParams, TFLiteModel
+from train.models import *
 from train.run import PORT, flwr_server
 
 logger = getLogger(__name__)
@@ -19,7 +18,7 @@ def monitor_db_conn_once(server: "Server"):
     elif kind == "save_params":
         if not isinstance(msg, list):
             raise ValueError(f"Wrong parameters {msg} for `save_params`.")
-        to_save = ModelParams(params=msg, tflite_model=server.model)
+        to_save = make_model_params(msg, server.model)
         to_save.save()
         server.update_session_end_time()
     return False
@@ -44,8 +43,7 @@ def model_params(model: TFLiteModel):
         params: ModelParams = model.params.last()  # type: ignore
         if params is None:
             return
-        # TODO: Support not just float 32.
-        tensors = [array(param, dtype=single).tobytes() for param in params.params]
+        tensors = [param.tobytes() for param in params.decode_params()]
         return Parameters(tensors, tensor_type="numpy.ndarray")
     except RuntimeError as err:
         logger.warning(err)

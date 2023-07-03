@@ -18,14 +18,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.room.Room
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import org.eu.fedcampus.train.SampleSpec
 import org.eu.fedcampus.train.Train
-import org.tensorflow.lite.examples.transfer.api.TransferLearningModel
+import org.eu.fedcampus.train.helpers.classifierAccuracy
+import org.eu.fedcampus.train.helpers.loadMappedFile
+import org.eu.fedcampus.train.helpers.negativeLogLikelihoodLoss
 import java.util.*
 
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
     private val scope = MainScope()
-    lateinit var train: Train
+    lateinit var train: Train<Float3DArray, FloatArray>
     private lateinit var ip: EditText
     private lateinit var port: EditText
     private lateinit var loadDataButton: Button
@@ -98,14 +101,21 @@ class MainActivity : AppCompatActivity() {
                 loadDataInBackground()
             }
             scope.launch {
-                db.inputDao().upsertAll(inputFromEditText(device_id, ip, port))
+                db.inputDao().upsertAll(
+                    Input(
+                        1,
+                        device_id.text.toString(),
+                        ip.text.toString(),
+                        port.text.toString()
+                    )
+                )
             }
         }
     }
 
     suspend fun loadDataInBackground() {
         val result = runWithStacktraceOr("Failed to load training dataset.") {
-            loadData(this, train.flowerClient.tlModel, device_id.text.toString().toInt())
+            loadData(this, train.flowerClient, device_id.text.toString().toInt())
             "Training dataset is loaded in memory. Ready to train!"
         }
         runOnUiThread {
@@ -152,28 +162,22 @@ class MainActivity : AppCompatActivity() {
     suspend fun connectInBackground(host: String, port: Int) {
         val backendUrl = "http://$host:$port"
         Log.i(TAG, "Backend URL: $backendUrl")
-        train = Train(this, backendUrl, db.modelDao())
+        val sampleSpec = SampleSpec<Float3DArray, FloatArray>(
+            { it.toTypedArray() },
+            { it.toTypedArray() },
+            { Array(it) { FloatArray(CLASSES.size) } },
+            ::negativeLogLikelihoodLoss,
+            ::classifierAccuracy,
+        )
+        train = Train(this, backendUrl, sampleSpec, db.modelDao())
         val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         train.enableTelemetry(stringToLong(deviceId))
-        val modelLoader = train.prepareModelLoader(DATA_TYPE)
-        val classes = listOf(
-            "cat",
-            "dog",
-            "truck",
-            "bird",
-            "airplane",
-            "ship",
-            "frog",
-            "horse",
-            "deer",
-            "automobile"
-        )
-        val model = TransferLearningModel(modelLoader, classes)
+        val modelFile = train.prepareModel(DATA_TYPE)
         val serverData = train.getServerInfo()
         if (serverData.port == null) {
             throw Error("Flower server port not available, status ${serverData.status}")
         }
-        train.prepare(model, "dns:///$host:${serverData.port}", false)
+        train.prepare(loadMappedFile(modelFile), "dns:///$host:${serverData.port}", false)
         runOnUiThread {
             loadDataButton.isEnabled = true
             setResultText("Prepared for training.")
@@ -213,3 +217,5 @@ class MainActivity : AppCompatActivity() {
 
 private const val TAG = "MainActivity"
 private const val DATA_TYPE = "CIFAR10_32x32x3"
+
+typealias Float3DArray = Array<Array<FloatArray>>

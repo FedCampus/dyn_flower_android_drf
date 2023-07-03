@@ -16,21 +16,9 @@ python3 manage.py migrate
 
 ### Download TFLite models
 
-Download the models to `static/CIFAR10_model`.
+Download the model file from <https://github.com/FedCampus/dyn_flower_android_drf/files/11858642/cifar10.zip> to `static/cifar10.tflite`.
 
-The model files are at <https://www.dropbox.com/s/tubgpepk2q6xiny/models.zip?dl=1>.
-
-Your `static/` should look like this:
-
-```
- static
-└──  CIFAR10_model
-   ├──  bottleneck.tflite
-   ├──  inference.tflite
-   ├──  initialize.tflite
-   ├──  optimizer.tflite
-   └──  train_head.tflite
-```
+- Alternatively, generate it using the script in `../gen_tflite/cifar10_eg/`.
 
 ### Create TFLite model in database
 
@@ -40,7 +28,7 @@ Pipe the seed script into a Django shell:
 cat seed.py | python3 manage.py shell
 ```
 
-The above script addes the CIFAR10 training data type and model to database.
+The above script adds the CIFAR10 training data type and model to database.
 
 ## Development
 
@@ -51,6 +39,25 @@ python3 manage.py runserver 0.0.0.0:8000
 ```
 
 Find you local IP in your system settings for the physical device to connect to.
+
+## Adding custom model
+
+To add a new TFLite model to the backend database, follow the following steps:
+
+1. Following `../gen_tflite/README.md`, generate the `.tflite` file.
+1. Move the generated `.tflite` file to `static/`.
+1. Use a script referencing `seed.py`.
+    Replace `sizes` with the `Model parameter sizes in bytes` printout from the model generation script. Replace `d` with the proper `TrainingDataType`.
+
+    ```python
+    m = TFLiteModel(
+        name="my_models_name",
+        file_path="/static/my_model.tflite",
+        layers_sizes=sizes,
+        data_type=d,
+    )
+    m.save()
+    ```
 
 ## Docker Deployment
 

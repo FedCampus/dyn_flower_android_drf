@@ -5,35 +5,32 @@ import androidx.room.*
 import java.io.File
 
 // Always change together with Python `train.models.TFLiteModel`.
-@Entity
-data class Model(
-    @PrimaryKey val id: Long,
-    @ColumnInfo val name: String,
-    @ColumnInfo val n_layers: Long,
-    @field:TypeConverters(TFLiteFilesConverter::class)
-    @ColumnInfo val tflite_files: List<String>
+data class TFLiteModel(
+    val id: Long,
+    val name: String,
+    val file_path: String,
+    val layers_sizes: IntArray,
 ) {
     @Throws
     fun getModelDir(context: Context): File {
         return context.getExternalFilesDir("models/$name/")!!
     }
-}
 
-class TFLiteFilesConverter {
-    @TypeConverter
-    fun fromList(list: List<String>): String {
-        return list.joinToString(DELIMITER)
-    }
-
-    @TypeConverter
-    fun toList(string: String): List<String> {
-        return string.split(DELIMITER)
-    }
-
-    companion object {
-        const val DELIMITER = ":"
+    fun toDbModel(): Model {
+        return Model(id, name, file_path, layers_sizes.size.toLong())
     }
 }
+
+/**
+ * Simplified version of [TFLiteModel] to save in database.
+ */
+@Entity
+data class Model(
+    @PrimaryKey val id: Long,
+    @ColumnInfo val name: String,
+    @ColumnInfo val file_path: String,
+    @ColumnInfo val n_layers: Long,
+)
 
 @Dao
 interface ModelDao {
