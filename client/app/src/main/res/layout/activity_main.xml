@@ -95,6 +95,14 @@
             android:onClick="runGrpc"
             android:text="Train Federated!" />
 
+    <CheckBox
+            android:id="@+id/fresh_start_checkbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="Fresh Start"
+            android:textColor="#4a5663" />
+
     <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

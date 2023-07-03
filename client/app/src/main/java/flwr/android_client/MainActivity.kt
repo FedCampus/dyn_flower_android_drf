@@ -11,6 +11,7 @@ import android.util.Patterns
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -37,6 +38,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var connectButton: Button
     private lateinit var trainButton: Button
     private lateinit var resultText: TextView
+    private lateinit var freshStartCheckbox: CheckBox
     private lateinit var device_id: EditText
     lateinit var db: Db
 
@@ -52,6 +54,7 @@ class MainActivity : AppCompatActivity() {
         loadDataButton = findViewById(R.id.load_data)
         connectButton = findViewById(R.id.connect)
         trainButton = findViewById(R.id.trainFederated)
+        freshStartCheckbox = findViewById(R.id.fresh_start_checkbox)
         scope.launch { restoreInput() }
     }
 
@@ -175,7 +178,8 @@ class MainActivity : AppCompatActivity() {
         val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         train.enableTelemetry(stringToLong(deviceId))
         val modelFile = train.prepareModel(DATA_TYPE)
-        val serverData = train.getServerInfo()
+        val serverData = train.getServerInfo(freshStartCheckbox.isChecked)
+        freshStartCheckbox.isEnabled = false
         if (serverData.port == null) {
             throw Error("Flower server port not available, status ${serverData.status}")
         }

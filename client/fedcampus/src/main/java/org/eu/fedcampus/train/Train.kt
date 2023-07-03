@@ -84,13 +84,13 @@ class Train<X : Any, Y : Any> constructor(
     }
 
     @Throws
-    suspend fun getServerInfo(): ServerData = when (state) {
-        is TrainState.WithModel -> doGetServerInfo(state.model)
+    suspend fun getServerInfo(start_fresh: Boolean = false): ServerData = when (state) {
+        is TrainState.WithModel -> doGetServerInfo(state.model, start_fresh)
         else -> throw IllegalStateException("`getServerInfo` called with $state")
     }
 
-    private suspend fun doGetServerInfo(model: TFLiteModel): ServerData {
-        val serverData = client.postServer(model)
+    private suspend fun doGetServerInfo(model: TFLiteModel, start_fresh: Boolean): ServerData {
+        val serverData = client.postServer(model, start_fresh)
         sessionId = serverData.session_id
         Log.i("Server data", "$serverData")
         return serverData

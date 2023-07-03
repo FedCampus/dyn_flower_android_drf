@@ -53,8 +53,8 @@ class HttpClient constructor(url: String) {
     }
 
     @Throws
-    suspend fun postServer(model: TFLiteModel): ServerData {
-        val body = PostServerData(model.id)
+    suspend fun postServer(model: TFLiteModel, start_fresh: Boolean): ServerData {
+        val body = PostServerData(model.id, start_fresh)
         val postServer = retrofit.create<PostServer>()
         return postServer.postServer(body)
     }
@@ -87,7 +87,7 @@ data class PostAdvertisedData(val data_type: String)
 // Always change together with Python `train.data.ServerData`.
 data class ServerData(val status: String, val session_id: Int?, val port: Int?)
 
-data class PostServerData(val id: Long)
+data class PostServerData(val id: Long, val start_fresh: Boolean)
 
 // Always change together with Python `telemetry.models.FitInsTelemetryData`.
 data class FitInsTelemetryData(
