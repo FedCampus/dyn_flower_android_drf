@@ -25,7 +25,7 @@ class MyModel(BaseTFLiteModel):
 
     def __init__(self):
         self.model = tf.keras.Sequential([
-                # Layers.
+            # Layers.
         ])
         self.model.compile()
 ```

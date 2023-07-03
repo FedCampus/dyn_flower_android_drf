@@ -40,6 +40,25 @@ python3 manage.py runserver 0.0.0.0:8000
 
 Find you local IP in your system settings for the physical device to connect to.
 
+## Adding custom model
+
+To add a new TFLite model to the backend database, follow the following steps:
+
+1. Following `../gen_tflite/README.md`, generate the `.tflite` file.
+1. Move the generated `.tflite` file to `static/`.
+1. Use a script referencing `seed.py`.
+    Replace `sizes` with the `Model parameter sizes in bytes` printout from the model generation script. Replace `d` with the proper `TrainingDataType`.
+
+    ```python
+    m = TFLiteModel(
+        name="my_models_name",
+        file_path="/static/my_model.tflite",
+        layers_sizes=sizes,
+        data_type=d,
+    )
+    m.save()
+    ```
+
 ## Docker Deployment
 
 This project can be deployed using Docker, which ensures that it will run the same way on every machine, regardless of the local setup.
