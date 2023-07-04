@@ -28,8 +28,8 @@ jobs:
         with:
           images: fedcampus/dyn_flower_android_drf
           flavor: |
-            latest=true
-            prefix="Prod"
+            latest= true
+            prefix= Prod
           tags: |
             type=sha
       
