@@ -1,0 +1,13 @@
+FROM python:3.11.4-bullseye
+
+WORKDIR /app
+COPY ./ /app/
+
+RUN python3 -m pip install -r ./requirements.txt
+
+RUN python3 /app/manage.py migrate
+
+ENV PRODUCTION false
+ENV PRODUCTION_ARGUMENT ""
+
+CMD sh /app/run.sh
