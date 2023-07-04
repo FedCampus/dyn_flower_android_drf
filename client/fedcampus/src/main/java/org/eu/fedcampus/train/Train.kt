@@ -63,13 +63,14 @@ class Train<X : Any, Y : Any> constructor(
      * Download TFLite files to `"models/$path"` if they have not been saved to DB.
      */
     @Throws
-    suspend fun downloadModelFile(modelDir: File): File = when (state) {
-        is TrainState.WithModel -> doDownloadModelFile(modelDir)
-        else -> throw IllegalStateException("`downloadModelFile` called with $state")
+    suspend fun downloadModelFile(modelDir: File): File = state.let {
+        when (it) {
+            is TrainState.WithModel -> doDownloadModelFile(modelDir, it.model)
+            else -> throw IllegalStateException("`downloadModelFile` called with $state")
+        }
     }
 
-    private suspend fun doDownloadModelFile(modelDir: File): File {
-        val model = state.model
+    private suspend fun doDownloadModelFile(modelDir: File, model: TFLiteModel): File {
         val fileUrl = model.file_path
         val fileName = fileUrl.split("/").last()
         if (modelDownloaded(model)) {
@@ -84,9 +85,11 @@ class Train<X : Any, Y : Any> constructor(
     }
 
     @Throws
-    suspend fun getServerInfo(start_fresh: Boolean = false): ServerData = when (state) {
-        is TrainState.WithModel -> doGetServerInfo(state.model, start_fresh)
-        else -> throw IllegalStateException("`getServerInfo` called with $state")
+    suspend fun getServerInfo(start_fresh: Boolean = false): ServerData = state.let {
+        when (it) {
+            is TrainState.WithModel -> doGetServerInfo(it.model, start_fresh)
+            else -> throw IllegalStateException("`getServerInfo` called with $state")
+        }
     }
 
     private suspend fun doGetServerInfo(model: TFLiteModel, start_fresh: Boolean): ServerData {
@@ -117,9 +120,11 @@ class Train<X : Any, Y : Any> constructor(
      * Initialize Flower Client with TFLite model [buffer] and establish channel connection to Flower server.
      */
     @Throws
-    suspend fun prepare(buffer: MappedByteBuffer, address: String, secure: Boolean) = when (state) {
-        is TrainState.WithModel -> doPrepare(buffer, address, secure, state.model)
-        else -> throw IllegalStateException("`prepare` called with $state")
+    suspend fun prepare(buffer: MappedByteBuffer, address: String, secure: Boolean) = state.let {
+        when (it) {
+            is TrainState.WithModel -> doPrepare(buffer, address, secure, it.model)
+            else -> throw IllegalStateException("`prepare` called with $state")
+        }
     }
 
     private suspend fun doPrepare(
@@ -145,9 +150,11 @@ class Train<X : Any, Y : Any> constructor(
      * Only call this after loading training data into the Flower Client.
      */
     @Throws
-    fun start(callback: (String) -> Unit) = when (state) {
-        is TrainState.Prepared -> doStart(callback, state.model, state.flowerClient, state.channel)
-        else -> throw IllegalStateException("`start` called with $state")
+    fun start(callback: (String) -> Unit) = state.let {
+        when (it) {
+            is TrainState.Prepared -> doStart(callback, it.model, it.flowerClient, it.channel)
+            else -> throw IllegalStateException("`start` called with $state")
+        }
     }
 
     private fun doStart(
