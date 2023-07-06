@@ -30,7 +30,7 @@ android {
     }
 }
 
-def grpc_version = '1.43.0'
+def grpc_version = '1.56.1'
 
 protobuf {
     protoc { artifact = 'com.google.protobuf:protoc:3.11.0' }
