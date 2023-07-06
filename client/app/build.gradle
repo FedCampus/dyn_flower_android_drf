@@ -68,10 +68,5 @@ dependencies {
     // Local dependencies.
     implementation project(path: ':FedCampus')
 
-    // Not updating this because `Unable to make private void java.util.concurrent.CopyOnWriteArrayList.writeObject(java.io.ObjectOutputStream) throws java.io.IOException accessible: module java.base does not "opens java.util.concurrent" to unnamed module @33b07ddd`
-    def lifecycle_version = '2.2.0'
-    implementation "androidx.lifecycle:lifecycle-extensions:$lifecycle_version"
-    implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycle_version"
-
     implementation 'com.google.android.material:material:1.9.0'
 }
