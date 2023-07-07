@@ -10,6 +10,8 @@ Set up and start the backend server according to `Set up` and `Development` sect
 
 Install the app on *physical* Android devices and launch it.
 
+*Note*: the highest tested JDK version the app supports is 16; it fails to build using JDK 19 on macOS.
+
 In the user interface, fill in:
 
 - Device number: a unique number among 1 ~ 10.
