@@ -34,7 +34,7 @@ class FlowerServiceRunnable<X : Any, Y : Any>
         override fun onNext(msg: ServerMessage) {
             try {
                 handleMessage(msg)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 e.printStackTrace()
             }
         }
@@ -91,7 +91,7 @@ class FlowerServiceRunnable<X : Any, Y : Any>
             lossCallback = { callback("Average loss: ${it.average()}.") })
         if (start != null) {
             val end = System.currentTimeMillis()
-            scope.launch { train.fitInsTelemetry(start, end) }
+            launchLogErr { train.fitInsTelemetry(start, end) }
         }
         return fitResAsProto(weightsByteBuffers(), sampleSize)
     }
@@ -109,9 +109,17 @@ class FlowerServiceRunnable<X : Any, Y : Any>
         callback("Test Accuracy after this round = $accuracy")
         if (start != null) {
             val end = System.currentTimeMillis()
-            scope.launch { train.evaluateInsTelemetry(start, end, loss, accuracy, sampleSize) }
+            launchLogErr { train.evaluateInsTelemetry(start, end, loss, accuracy, sampleSize) }
         }
         return evaluateResAsProto(loss, sampleSize)
+    }
+
+    private fun launchLogErr(task: suspend () -> Unit) {
+        try {
+            scope.launch { task() }
+        } catch (err: Throwable) {
+            Log.e(TAG, err.stackTraceToString())
+        }
     }
 
     private fun weightsByteBuffers(): Array<ByteBuffer> {

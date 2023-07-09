@@ -1,6 +1,6 @@
 """`fig_config` and code in `server` are copied from Flower Android example."""
 from logging import getLogger
-from multiprocessing.connection import Connection
+from typing import Callable
 
 from flwr.common import FitRes, Parameters, Scalar
 from flwr.server import ServerConfig, start_server
@@ -15,7 +15,7 @@ logger = getLogger(__name__)
 
 
 class FedAvgAndroidSave(FedAvgAndroid):
-    db_conn: Connection | None = None
+    save_params: Callable | None = None
 
     def aggregate_fit(
         self,
@@ -37,14 +37,14 @@ class FedAvgAndroidSave(FedAvgAndroid):
             for client, fit_res in results
         ]
         aggregated = aggregate(weights_results)
-        self.signal_save_params(aggregated)
+        self.try_save_params(aggregated)
         return self.ndarrays_to_parameters(aggregated), {}
 
-    def signal_save_params(self, params: list[NDArray]):
-        if self.db_conn is None:
-            # Skip if no connection to DB is provided.
+    def try_save_params(self, params: list[NDArray]):
+        if self.save_params is None:
+            # Skip if no related task is provided.
             return
-        self.db_conn.send(("save_params", params))
+        self.save_params(params)
 
 
 def fit_config(server_round: int):
@@ -55,12 +55,12 @@ def fit_config(server_round: int):
     """
     config = {
         "batch_size": 32,
-        "local_epochs": 5,
+        "local_epochs": 1,
     }
     return config
 
 
-def flwr_server(db_conn: Connection | None, initial_parameters: Parameters | None):
+def flwr_server(save_params: Callable | None, initial_parameters: Parameters | None):
     # TODO: Make configurable.
     strategy = FedAvgAndroidSave(
         fraction_fit=1.0,
@@ -72,7 +72,7 @@ def flwr_server(db_conn: Connection | None, initial_parameters: Parameters | Non
         on_fit_config_fn=fit_config,
         initial_parameters=initial_parameters,
     )
-    strategy.db_conn = db_conn
+    strategy.save_params = save_params
 
     logger.warning("Starting Flower server.")
     try:
@@ -84,5 +84,3 @@ def flwr_server(db_conn: Connection | None, initial_parameters: Parameters | Non
         )
     except KeyboardInterrupt:
         return
-    if db_conn is not None:
-        db_conn.send(("done", None))
