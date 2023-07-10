@@ -120,9 +120,9 @@ class Train<X : Any, Y : Any> constructor(
      * Initialize Flower Client with TFLite model [buffer] and establish channel connection to Flower server.
      */
     @Throws
-    suspend fun prepare(buffer: MappedByteBuffer, address: String, secure: Boolean) = state.let {
+    suspend fun prepare(buffer: MappedByteBuffer, address: String, useTLS: Boolean) = state.let {
         when (it) {
-            is TrainState.WithModel -> doPrepare(buffer, address, secure, it.model)
+            is TrainState.WithModel -> doPrepare(buffer, address, useTLS, it.model)
             else -> throw IllegalStateException("`prepare` called with $state")
         }
     }
@@ -130,13 +130,13 @@ class Train<X : Any, Y : Any> constructor(
     private suspend fun doPrepare(
         buffer: MappedByteBuffer,
         address: String,
-        secure: Boolean,
+        useTLS: Boolean,
         model: TFLiteModel
     ): FlowerClient<X, Y> {
         val flowerClient = FlowerClient(buffer, model, sampleSpec)
         val channelBuilder =
             ManagedChannelBuilder.forTarget(address).maxInboundMessageSize(HUNDRED_MEBIBYTE)
-        if (!secure) {
+        if (!useTLS) {
             channelBuilder.usePlaintext()
         }
         val channel = withContext(Dispatchers.IO) {
