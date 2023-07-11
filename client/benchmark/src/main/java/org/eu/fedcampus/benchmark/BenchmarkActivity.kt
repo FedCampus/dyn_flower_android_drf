@@ -11,7 +11,7 @@ import android.webkit.URLUtil
 import androidx.appcompat.app.AppCompatActivity
 import androidx.work.WorkManager
 import org.eu.fedcampus.benchmark.databinding.ActivityBenchmarkBinding
-import org.eu.fedcampus.train.background.trainWorkRequest
+import org.eu.fedcampus.train.background.fastTrainWorkRequest
 import org.eu.fedcampus.train.background.trainWorkerData
 import org.eu.fedcampus.train.helpers.deviceId
 import java.text.SimpleDateFormat
@@ -20,13 +20,13 @@ import java.util.Locale
 
 class BenchmarkActivity : AppCompatActivity() {
     lateinit var binding: ActivityBenchmarkBinding
-    lateinit var workManger: WorkManager
+    lateinit var workManager: WorkManager
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityBenchmarkBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        workManger = WorkManager.getInstance(this)
+        workManager = WorkManager.getInstance(this)
 
         enterClickSub()
         binding.btSub.setOnClickListener { submit() }
@@ -45,8 +45,8 @@ class BenchmarkActivity : AppCompatActivity() {
 
         val inputData = trainWorkerData(url, deviceId(this), uri, 1)
         val trainWork =
-            trainWorkRequest<BenchmarkCifar10Worker, Float3DArray, FloatArray>(inputData)
-        workManger.enqueue(trainWork)
+            fastTrainWorkRequest<BenchmarkCifar10Worker, Float3DArray, FloatArray>(inputData)
+        workManager.enqueue(trainWork)
         appendLog("Submit training work request for $uri")
     }
 
