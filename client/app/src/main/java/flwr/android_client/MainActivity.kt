@@ -3,7 +3,6 @@ package flwr.android_client
 import android.annotation.SuppressLint
 import android.icu.text.SimpleDateFormat
 import android.os.Bundle
-import android.provider.Settings
 import android.text.TextUtils
 import android.text.method.ScrollingMovementMethod
 import android.util.Log
@@ -23,6 +22,7 @@ import org.eu.fedcampus.train.FlowerClient
 import org.eu.fedcampus.train.SampleSpec
 import org.eu.fedcampus.train.Train
 import org.eu.fedcampus.train.helpers.classifierAccuracy
+import org.eu.fedcampus.train.helpers.deviceId
 import org.eu.fedcampus.train.helpers.loadMappedFile
 import org.eu.fedcampus.train.helpers.negativeLogLikelihoodLoss
 import java.util.*
@@ -156,12 +156,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun stringToLong(string: String): Long {
-        val hashCode = string.hashCode().toLong()
-        val secondHashCode = string.reversed().hashCode().toLong()
-        return (hashCode shl 32) or secondHashCode
-    }
-
     @SuppressLint("HardwareIds")
     @Throws
     suspend fun connectInBackground(host: String, port: Int) {
@@ -175,8 +169,7 @@ class MainActivity : AppCompatActivity() {
             ::classifierAccuracy,
         )
         train = Train(this, backendUrl, sampleSpec, db.modelDao())
-        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-        train.enableTelemetry(stringToLong(deviceId))
+        train.enableTelemetry(deviceId(this))
         val modelFile = train.prepareModel(DATA_TYPE)
         val serverData = train.getServerInfo(freshStartCheckbox.isChecked)
         freshStartCheckbox.isEnabled = false

@@ -1,6 +1,8 @@
 package org.eu.fedcampus.train.helpers
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.provider.Settings
 import android.util.Log
 import java.io.File
 import java.io.IOException
@@ -37,6 +39,18 @@ infix fun <T, R> Iterable<T>.lazyZip(other: Array<out R>): Sequence<Pair<T, R>> 
 }
 
 fun FloatArray.argmax(): Int = indices.maxBy { this[it] }
+
+fun stringToLong(string: String): Long {
+    val hashCode = string.hashCode().toLong()
+    val secondHashCode = string.reversed().hashCode().toLong()
+    return (hashCode shl 32) or secondHashCode
+}
+
+@SuppressLint("HardwareIds")
+fun deviceId(context: Context): Long {
+    val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+    return stringToLong(androidId)
+}
 
 @Throws(AssertionError::class)
 fun assertIntsEqual(expected: Int, actual: Int) {
