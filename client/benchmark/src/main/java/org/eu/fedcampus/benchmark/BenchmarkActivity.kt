@@ -9,19 +9,27 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.webkit.URLUtil
 import androidx.appcompat.app.AppCompatActivity
+import androidx.work.WorkManager
 import org.eu.fedcampus.benchmark.databinding.ActivityBenchmarkBinding
+import org.eu.fedcampus.train.background.trainWorkRequest
+import org.eu.fedcampus.train.background.trainWorkerData
+import org.eu.fedcampus.train.helpers.deviceId
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class BenchmarkActivity : AppCompatActivity() {
     lateinit var binding: ActivityBenchmarkBinding
+    lateinit var workManger: WorkManager
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityBenchmarkBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        workManger = WorkManager.getInstance(this)
+
         enterClickSub()
+        binding.btSub.setOnClickListener { submit() }
 
         appendLog("Initialized.")
     }
@@ -34,6 +42,12 @@ class BenchmarkActivity : AppCompatActivity() {
             appendLog("$url is invalid, please input a valid URI!")
             return
         }
+
+        val inputData = trainWorkerData(url, deviceId(this), uri, 1)
+        val trainWork =
+            trainWorkRequest<BenchmarkCifar10Worker, Float3DArray, FloatArray>(inputData)
+        workManger.enqueue(trainWork)
+        appendLog("Submit training work request for $uri")
     }
 
     private fun enterClickSub() = binding.etUri.setOnEditorActionListener { _, actionId, _ ->

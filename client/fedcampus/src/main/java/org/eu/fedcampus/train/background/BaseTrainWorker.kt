@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.Data
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkerParameters
@@ -20,40 +21,44 @@ import java.util.concurrent.TimeUnit
  */
 open class BaseTrainWorker<X : Any, Y : Any>(
     val context: Context, params: WorkerParameters,
-    val flowerHost: String,
-    backendUrl: String,
-    sampleSpec: SampleSpec<X, Y>,
+    val sampleSpec: SampleSpec<X, Y>,
     val dataType: String,
-    val loadData: (Context, FlowerClient<X, Y>) -> Unit,
+    val loadData: suspend (Context, FlowerClient<X, Y>, Int) -> Unit,
     val trainCallback: (String) -> Unit,
-    modelDao: ModelDao? = null,
-    deviceId: Long? = null,
-    val startFresh: Boolean = false,
+    val modelDao: ModelDao? = null,
     val useTLS: Boolean = false,
 ) : CoroutineWorker(context, params) {
-    val train = Train(context, backendUrl, sampleSpec, modelDao)
-
-    init {
-        if (deviceId != null) train.enableTelemetry(deviceId)
-        Log.i(TAG, "Starting with backend $backendUrl for $dataType.")
-    }
+    val data = inputData
+    lateinit var train: Train<X, Y>
 
     override suspend fun doWork() = try {
-        val flowerClient = prepare()
+        val backendUrl = data.getString("backendUrl")!!
+        val deviceId = data.getLong("deviceId", 0L)
+        val flowerHost = data.getString("flowerHost")!!
+        val participantId = data.getInt("participantId", 1)
+
+        train = Train(context, backendUrl, sampleSpec, modelDao)
+        if (deviceId != 0L) train.enableTelemetry(deviceId)
+        Log.i(TAG, "Starting with backend $backendUrl for $dataType.")
+
+        val flowerClient = prepare(flowerHost)
         Log.i(TAG, "Prepared $flowerClient.")
-        loadData(context, flowerClient)
+
+        loadData(context, flowerClient, participantId)
         Log.i(TAG, "Loaded data.")
+
         train.start(trainCallback)
         Log.i(TAG, "Finished.")
+
         Result.success()
     } catch (err: Throwable) {
         Log.e(TAG, err.stackTraceToString())
         Result.retry()
     }
 
-    private suspend fun prepare(): FlowerClient<X, Y> {
+    private suspend fun prepare(flowerHost: String): FlowerClient<X, Y> {
         val modelFile = train.prepareModel(dataType)
-        val serverData = train.getServerInfo(startFresh)
+        val serverData = train.getServerInfo()
         if (serverData.port == null) {
             throw Error("Flower server port not available, status ${serverData.status}")
         }
@@ -66,11 +71,20 @@ open class BaseTrainWorker<X : Any, Y : Any>(
     }
 }
 
-fun <Y : Any, X : Any> trainWorkRequest() = PeriodicWorkRequestBuilder<BaseTrainWorker<X, Y>>(
-    12, TimeUnit.HOURS,
-    10, TimeUnit.HOURS,
-).setConstraints(realIdleConstraints())
-    .addTag(BaseTrainWorker.TAG).build()
+fun trainWorkerData(backendUrl: String, deviceId: Long, flowerHost: String, participantId: Int) =
+    Data.Builder().putString("backendUrl", backendUrl)
+        .putLong("deviceId", deviceId)
+        .putString("flowerHost", flowerHost)
+        .putInt("participantId", participantId)
+        .build()
+
+inline fun <reified W : BaseTrainWorker<X, Y>, X : Any, Y : Any> trainWorkRequest(inputData: Data) =
+    PeriodicWorkRequestBuilder<W>(
+        1, TimeUnit.HOURS,
+        45, TimeUnit.MINUTES,
+    ).setConstraints(realIdleConstraints())
+        .setInputData(inputData)
+        .addTag(BaseTrainWorker.TAG).build()
 
 fun realIdleConstraints() =
     Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED).setRequiresCharging(true)

@@ -1,6 +1,5 @@
 package flwr.android_client
 
-import android.annotation.SuppressLint
 import android.icu.text.SimpleDateFormat
 import android.os.Bundle
 import android.text.TextUtils
@@ -156,19 +155,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("HardwareIds")
     @Throws
     suspend fun connectInBackground(host: String, port: Int) {
         val backendUrl = "http://$host:$port"
         Log.i(TAG, "Backend URL: $backendUrl")
-        val sampleSpec = SampleSpec<Float3DArray, FloatArray>(
-            { it.toTypedArray() },
-            { it.toTypedArray() },
-            { Array(it) { FloatArray(CLASSES.size) } },
-            ::negativeLogLikelihoodLoss,
-            ::classifierAccuracy,
-        )
-        train = Train(this, backendUrl, sampleSpec, db.modelDao())
+        train = Train(this, backendUrl, sampleSpec(), db.modelDao())
         train.enableTelemetry(deviceId(this))
         val modelFile = train.prepareModel(DATA_TYPE)
         val serverData = train.getServerInfo(freshStartCheckbox.isChecked)
@@ -215,7 +206,15 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
+fun sampleSpec() = SampleSpec<Float3DArray, FloatArray>(
+    { it.toTypedArray() },
+    { it.toTypedArray() },
+    { Array(it) { FloatArray(CLASSES.size) } },
+    ::negativeLogLikelihoodLoss,
+    ::classifierAccuracy,
+)
+
 private const val TAG = "MainActivity"
-private const val DATA_TYPE = "CIFAR10_32x32x3"
+const val DATA_TYPE = "CIFAR10_32x32x3"
 
 typealias Float3DArray = Array<Array<FloatArray>>
