@@ -15,14 +15,16 @@ import kotlin.concurrent.withLock
 import kotlin.concurrent.write
 
 /**
- * Construction of this class requires disk read.
+ * Flower client that handles TensorFlow Lite model [Interpreter] and sample data.
+ * @param tfliteFileBuffer TensorFlow Lite model file.
+ * @param spec Specification for the samples, see [SampleSpec].
  */
 class FlowerClient<X : Any, Y : Any>(
-    tfliteFile: MappedByteBuffer,
+    tfliteFileBuffer: MappedByteBuffer,
     val model: TFLiteModel,
     val spec: SampleSpec<X, Y>,
 ) : AutoCloseable {
-    val interpreter = Interpreter(tfliteFile)
+    val interpreter = Interpreter(tfliteFileBuffer)
     val interpreterLock = ReentrantLock()
     val trainingSamples = mutableListOf<Sample<X, Y>>()
     val testSamples = mutableListOf<Sample<X, Y>>()
@@ -30,6 +32,7 @@ class FlowerClient<X : Any, Y : Any>(
     val testSampleLock = ReentrantReadWriteLock()
 
     /**
+     * Add one sample point ([bottleneck], [label]) for training or testing later.
      * Thread-safe.
      */
     fun addSample(
@@ -42,7 +45,13 @@ class FlowerClient<X : Any, Y : Any>(
         }
     }
 
-    fun weights(): Array<ByteBuffer> {
+    /**
+     * Obtain the model parameters from [interpreter].
+     *
+     * This method is more expensive than a simple lookup because it interfaces [interpreter].
+     * Thread-safe.
+     */
+    fun getParameters(): Array<ByteBuffer> {
         val inputs: Map<String, Any> = FakeNonEmptyMap()
         val outputs = emptyParameterMap()
         runSignatureLocked(inputs, outputs, "parameters")
@@ -50,6 +59,12 @@ class FlowerClient<X : Any, Y : Any>(
         return parametersFromMap(outputs)
     }
 
+    /**
+     * Update the model parameters in [interpreter] with [parameters].
+     *
+     * This method is more expensive than a simple "set" because it interfaces [interpreter].
+     * Thread-safe.
+     */
     fun updateParameters(parameters: Array<ByteBuffer>): Array<ByteBuffer> {
         val outputs = emptyParameterMap()
         runSignatureLocked(parametersToMap(parameters), outputs, "restore")
@@ -57,7 +72,11 @@ class FlowerClient<X : Any, Y : Any>(
     }
 
     /**
+     * Fit the local model using [trainingSamples] for [epochs] epochs with batch size [batchSize].
+     *
      * Thread-safe, and block operations on [trainingSamples].
+     * @param lossCallback Called after every epoch with the [List] of training losses.
+     * @return [List] of average training losses for each epoch.
      */
     fun fit(
         epochs: Int = 1, batchSize: Int = 32, lossCallback: ((List<Float>) -> Unit)? = null
@@ -74,6 +93,12 @@ class FlowerClient<X : Any, Y : Any>(
         }
     }
 
+    /**
+     * Evaluate model loss and accuracy using [testSamples] and [spec].
+     *
+     * Thread-safe, and block operations on [testSamples].
+     * @return (loss, accuracy).
+     */
     fun evaluate(): Pair<Float, Float> {
         val result = testSampleLock.read {
             val bottlenecks = testSamples.map { it.bottleneck }
@@ -84,6 +109,9 @@ class FlowerClient<X : Any, Y : Any>(
         return result
     }
 
+    /**
+     * Run inference on [x] using [interpreter] and return the result.
+     */
     fun inference(x: Array<X>): Array<Y> {
         val inputs = mapOf("x" to x)
         val logits = spec.emptyY(x.size)
@@ -190,10 +218,13 @@ class FlowerClient<X : Any, Y : Any>(
     }
 }
 
+/**
+ * One sample data point ([bottleneck], [label]).
+ */
 data class Sample<X, Y>(val bottleneck: X, val label: Y)
 
 /**
- * This map always returns `false` when `isEmpty` is called to bypass TFLite interpreter's
+ * This map always returns `false` when [isEmpty] is called to bypass TFLite interpreter's
  * stupid empty check on the `input` argument of `runSignature`.
  */
 class FakeNonEmptyMap<K, V> : HashMap<K, V>() {

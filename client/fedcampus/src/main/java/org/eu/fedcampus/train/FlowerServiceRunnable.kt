@@ -7,20 +7,27 @@ import flwr.android_client.FlowerServiceGrpc
 import flwr.android_client.Parameters
 import flwr.android_client.Scalar
 import flwr.android_client.ServerMessage
+import io.grpc.ManagedChannel
+import io.grpc.ManagedChannelBuilder
 import io.grpc.stub.StreamObserver
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.eu.fedcampus.train.db.TFLiteModel
 import org.eu.fedcampus.train.helpers.assertIntsEqual
 import java.nio.ByteBuffer
 import java.util.concurrent.CountDownLatch
 
-class FlowerServiceRunnable<X : Any, Y : Any>
 /**
  * Start communication with Flower server and training in the background.
+ * Note: constructing an instance of this class **immediately** starts training.
+ * @param flowerServerChannel Channel already connected to Flower server.
+ * @param callback Called with information on training events.
  */
+class FlowerServiceRunnable<X : Any, Y : Any>
 @Throws constructor(
-    asyncStub: FlowerServiceGrpc.FlowerServiceStub,
+    val flowerServerChannel: ManagedChannel,
     val train: Train<X, Y>,
     val model: TFLiteModel,
     val flowerClient: FlowerClient<X, Y>,
@@ -30,6 +37,8 @@ class FlowerServiceRunnable<X : Any, Y : Any>
     private val sampleSize: Int
         get() = flowerClient.trainingSamples.size
     val finishLatch = CountDownLatch(1)
+
+    val asyncStub = FlowerServiceGrpc.newStub(flowerServerChannel)!!
     val requestObserver = asyncStub.join(object : StreamObserver<ServerMessage> {
         override fun onNext(msg: ServerMessage) {
             try {
@@ -49,7 +58,7 @@ class FlowerServiceRunnable<X : Any, Y : Any>
             finishLatch.countDown()
             Log.d(TAG, "Done")
         }
-    })
+    })!!
 
     @Throws
     fun handleMessage(message: ServerMessage) {
@@ -80,10 +89,10 @@ class FlowerServiceRunnable<X : Any, Y : Any>
         val start = if (train.telemetry) System.currentTimeMillis() else null
         val layers = message.fitIns.parameters.tensorsList
         assertIntsEqual(layers.size, model.layers_sizes.size)
-        val epoch_config = message.fitIns.configMap.getOrDefault(
+        val epochConfig = message.fitIns.configMap.getOrDefault(
             "local_epochs", Scalar.newBuilder().setSint64(1).build()
         )!!
-        val epochs = epoch_config.sint64.toInt()
+        val epochs = epochConfig.sint64.toInt()
         val newWeights = weightsFromLayers(layers)
         flowerClient.updateParameters(newWeights.toTypedArray())
         flowerClient.fit(
@@ -114,13 +123,10 @@ class FlowerServiceRunnable<X : Any, Y : Any>
         return evaluateResAsProto(loss, sampleSize)
     }
 
-    private fun weightsByteBuffers(): Array<ByteBuffer> {
-        return flowerClient.weights()
-    }
+    private fun weightsByteBuffers() = flowerClient.getParameters()
 
-    private fun weightsFromLayers(layers: List<ByteString>): List<ByteBuffer> {
-        return layers.map { ByteBuffer.wrap(it.toByteArray()) }
-    }
+    private fun weightsFromLayers(layers: List<ByteString>) =
+        layers.map { ByteBuffer.wrap(it.toByteArray()) }
 
     companion object {
         private const val TAG = "Flower Service Runnable"
@@ -151,3 +157,19 @@ fun evaluateResAsProto(accuracy: Float, testing_size: Int): ClientMessage {
         .setNumExamples(testing_size.toLong()).build()
     return ClientMessage.newBuilder().setEvaluateRes(res).build()
 }
+
+/**
+ * @param address Address of the gRPC server, like "dns:///$host:$port".
+ */
+suspend fun createChannel(address: String, useTLS: Boolean = false): ManagedChannel {
+    val channelBuilder =
+        ManagedChannelBuilder.forTarget(address).maxInboundMessageSize(HUNDRED_MEBIBYTE)
+    if (!useTLS) {
+        channelBuilder.usePlaintext()
+    }
+    return withContext(Dispatchers.IO) {
+        channelBuilder.build()
+    }
+}
+
+const val HUNDRED_MEBIBYTE = 100 * 1024 * 1024

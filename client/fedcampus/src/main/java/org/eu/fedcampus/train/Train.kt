@@ -2,9 +2,7 @@ package org.eu.fedcampus.train
 
 import android.content.Context
 import android.util.Log
-import flwr.android_client.FlowerServiceGrpc
 import io.grpc.ManagedChannel
-import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.*
 import org.eu.fedcampus.train.db.ModelDao
 import org.eu.fedcampus.train.db.TFLiteModel
@@ -134,13 +132,8 @@ class Train<X : Any, Y : Any> constructor(
         model: TFLiteModel
     ): FlowerClient<X, Y> {
         val flowerClient = FlowerClient(buffer, model, sampleSpec)
-        val channelBuilder =
-            ManagedChannelBuilder.forTarget(address).maxInboundMessageSize(HUNDRED_MEBIBYTE)
-        if (!useTLS) {
-            channelBuilder.usePlaintext()
-        }
         val channel = withContext(Dispatchers.IO) {
-            channelBuilder.build()
+            createChannel(address, useTLS)
         }
         state = TrainState.Prepared(model, flowerClient, channel)
         return flowerClient
@@ -162,11 +155,9 @@ class Train<X : Any, Y : Any> constructor(
         model: TFLiteModel,
         flowerClient: FlowerClient<X, Y>,
         channel: ManagedChannel
-    ) {
-        val service = FlowerServiceGrpc.newStub(channel)
-        val flowerServiceRunnable =
-            FlowerServiceRunnable(service, this, model, flowerClient, callback)
-        state = TrainState.Training(model, flowerClient, flowerServiceRunnable)
+    ) = FlowerServiceRunnable(channel, this, model, flowerClient, callback).let {
+        state = TrainState.Training(model, flowerClient, it)
+        it
     }
 
     /**
@@ -202,5 +193,4 @@ class Train<X : Any, Y : Any> constructor(
     }
 }
 
-const val HUNDRED_MEBIBYTE = 100 * 1024 * 1024
 const val downloadModelFileTag = "Download TFLite model"
