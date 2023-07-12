@@ -91,9 +91,7 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
         val epochs = epochConfig.sint64.toInt()
         val newWeights = weightsFromLayers(layers)
         flowerClient.updateParameters(newWeights.toTypedArray())
-        flowerClient.fit(
-            epochs,
-            lossCallback = { callback("Average loss: ${it.average()}.") })
+        flowerClient.fit(epochs, lossCallback = { callback("Average loss: ${it.average()}.") })
         if (start != null) {
             val end = System.currentTimeMillis()
             scope.launch { train.fitInsTelemetry(start, end) }

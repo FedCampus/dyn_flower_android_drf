@@ -79,31 +79,25 @@ open class BaseTrainWorker<X : Any, Y : Any>(
 }
 
 fun trainWorkerData(backendUrl: String, deviceId: Long, flowerHost: String, participantId: Int) =
-    Data.Builder().putString("backendUrl", backendUrl)
-        .putLong("deviceId", deviceId)
-        .putString("flowerHost", flowerHost)
-        .putInt("participantId", participantId)
-        .build()
+    Data.Builder().putString("backendUrl", backendUrl).putLong("deviceId", deviceId)
+        .putString("flowerHost", flowerHost).putInt("participantId", participantId).build()
 
+@Suppress("unused")
 inline fun <reified W : BaseTrainWorker<X, Y>, X : Any, Y : Any> trainWorkRequest(inputData: Data) =
     PeriodicWorkRequestBuilder<W>(
         8, TimeUnit.HOURS,
         6, TimeUnit.HOURS,
-    ).setConstraints(realIdleConstraints())
-        .setInputData(inputData)
-        .addTag(BaseTrainWorker.TAG).build()
+    ).setConstraints(realIdleConstraints()).setInputData(inputData).addTag(BaseTrainWorker.TAG)
+        .build()
 
 inline fun <reified W : BaseTrainWorker<X, Y>, X : Any, Y : Any> fastTrainWorkRequest(inputData: Data) =
     PeriodicWorkRequestBuilder<W>(
         15, TimeUnit.MINUTES, // Minimum interval allowed.
         10, TimeUnit.MINUTES,
-    ).setConstraints(wifiConstraints())
-        .setInputData(inputData)
-        .addTag(BaseTrainWorker.TAG).build()
+    ).setConstraints(wifiConstraints()).setInputData(inputData).addTag(BaseTrainWorker.TAG).build()
 
 fun realIdleConstraints() =
     Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED).setRequiresCharging(true)
         .setRequiresDeviceIdle(true).build()
 
-fun wifiConstraints() =
-    Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED).build()
+fun wifiConstraints() = Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED).build()
