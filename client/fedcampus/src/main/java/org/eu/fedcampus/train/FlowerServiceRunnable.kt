@@ -58,33 +58,30 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
 
     @Throws
     fun handleMessage(message: ServerMessage) {
-        val (clientMessage, keepGoing) = if (message.hasGetParametersIns()) {
+        val clientMessage = if (message.hasGetParametersIns()) {
             handleGetParamsIns()
         } else if (message.hasFitIns()) {
             handleFitIns(message)
         } else if (message.hasEvaluateIns()) {
             handleEvaluateIns(message)
         } else if (message.hasReconnectIns()) {
-            handleReconnectIns()
+            return requestObserver.onCompleted()
         } else {
             throw Error("Unknown client message $message.")
         }
         requestObserver.onNext(clientMessage)
-        if (!keepGoing) {
-            requestObserver.onCompleted()
-        }
         callback("Response sent to the server")
     }
 
     @Throws
-    fun handleGetParamsIns(): Pair<ClientMessage, Boolean> {
+    fun handleGetParamsIns(): ClientMessage {
         Log.d(TAG, "Handling GetParameters")
         callback("Handling GetParameters message from the server.")
-        return weightsAsProto(weightsByteBuffers()) to true
+        return weightsAsProto(weightsByteBuffers())
     }
 
     @Throws
-    fun handleFitIns(message: ServerMessage): Pair<ClientMessage, Boolean> {
+    fun handleFitIns(message: ServerMessage): ClientMessage {
         Log.d(TAG, "Handling FitIns")
         callback("Handling Fit request from the server.")
         val start = if (train.telemetry) System.currentTimeMillis() else null
@@ -101,11 +98,11 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
             val end = System.currentTimeMillis()
             scope.launch { train.fitInsTelemetry(start, end) }
         }
-        return fitResAsProto(weightsByteBuffers(), sampleSize) to true
+        return fitResAsProto(weightsByteBuffers(), sampleSize)
     }
 
     @Throws
-    fun handleEvaluateIns(message: ServerMessage): Pair<ClientMessage, Boolean> {
+    fun handleEvaluateIns(message: ServerMessage): ClientMessage {
         Log.d(TAG, "Handling EvaluateIns")
         callback("Handling Evaluate request from the server")
         val start = if (train.telemetry) System.currentTimeMillis() else null
@@ -119,15 +116,7 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
             val end = System.currentTimeMillis()
             scope.launch { train.evaluateInsTelemetry(start, end, loss, accuracy, sampleSize) }
         }
-        return evaluateResAsProto(loss, sampleSize) to true
-    }
-
-    @Throws
-    fun handleReconnectIns(): Pair<ClientMessage, Boolean> {
-        Log.d(TAG, "Handling ReconnectIns")
-        callback("Handling Reconnection request from the server")
-        return ClientMessage.newBuilder()
-            .setDisconnectRes(ClientMessage.DisconnectRes.newBuilder().build()).build() to false
+        return evaluateResAsProto(loss, sampleSize)
     }
 
     private fun weightsByteBuffers() = flowerClient.getParameters()
