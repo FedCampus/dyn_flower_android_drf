@@ -1,10 +1,16 @@
 package org.eu.fedcampus.train.background
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
+import android.os.Build
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.Data
+import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkerParameters
@@ -34,6 +40,14 @@ open class BaseTrainWorker<X : Any, Y : Any>(
     lateinit var train: Train<X, Y>
 
     override suspend fun doWork() = try {
+        setForeground(ForegroundInfo(1, createNotification("Training", context)))
+        train()
+    } catch (err: Throwable) {
+        Log.e(TAG, err.stackTraceToString())
+        Result.retry()
+    }
+
+    suspend fun train(): Result {
         val backendUrl = data.getString("backendUrl")!!
         val deviceId = data.getLong("deviceId", 0L)
         val flowerHost = data.getString("flowerHost")!!
@@ -57,10 +71,7 @@ open class BaseTrainWorker<X : Any, Y : Any>(
         }
         Log.i(TAG, "Finished.")
 
-        Result.success()
-    } catch (err: Throwable) {
-        Log.e(TAG, err.stackTraceToString())
-        Result.retry()
+        return Result.success()
     }
 
     private suspend fun prepare(flowerHost: String): FlowerClient<X, Y> {
@@ -101,3 +112,34 @@ fun realIdleConstraints() =
         .setRequiresDeviceIdle(true).build()
 
 fun wifiConstraints() = Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED).build()
+
+/**
+ * Create a Notification that is shown as a heads-up notification if possible.
+ *
+ * Adopted from `codelab-android-workmanager`.
+ */
+fun createNotification(message: String, context: Context): Notification {
+    // Make a channel if necessary
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        val name = "FedCampus"
+        val importance = NotificationManager.IMPORTANCE_HIGH
+        val channel = NotificationChannel(CHANNEL_ID, name, importance)
+
+        // Add the channel
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager?
+
+        notificationManager?.createNotificationChannel(channel)
+    }
+
+    // Create the notification
+    return NotificationCompat.Builder(context, CHANNEL_ID)
+        .setContentTitle("FedCampus")
+        .setContentText(message)
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .setVibrate(LongArray(0)).build()
+}
+
+const val CHANNEL_ID = "FedCampus Channel"
