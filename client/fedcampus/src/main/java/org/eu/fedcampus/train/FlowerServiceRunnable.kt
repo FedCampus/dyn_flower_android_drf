@@ -25,14 +25,13 @@ import java.util.concurrent.CountDownLatch
  * @param flowerServerChannel Channel already connected to Flower server.
  * @param callback Called with information on training events.
  */
-class FlowerServiceRunnable<X : Any, Y : Any>
-@Throws constructor(
+class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
     val flowerServerChannel: ManagedChannel,
     val train: Train<X, Y>,
     val model: TFLiteModel,
     val flowerClient: FlowerClient<X, Y>,
     val callback: (String) -> Unit
-) {
+) : AutoCloseable {
     private val scope = MainScope()
     private val sampleSize: Int
         get() = flowerClient.trainingSamples.size
@@ -40,22 +39,19 @@ class FlowerServiceRunnable<X : Any, Y : Any>
 
     val asyncStub = FlowerServiceGrpc.newStub(flowerServerChannel)!!
     val requestObserver = asyncStub.join(object : StreamObserver<ServerMessage> {
-        override fun onNext(msg: ServerMessage) {
-            try {
-                handleMessage(msg)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+        override fun onNext(msg: ServerMessage) = try {
+            handleMessage(msg)
+        } catch (err: Throwable) {
+            logStacktrace(err)
         }
 
-        override fun onError(t: Throwable) {
-            t.printStackTrace()
-            finishLatch.countDown()
-            Log.e(TAG, t.message!!)
+        override fun onError(err: Throwable) {
+            logStacktrace(err)
+            close()
         }
 
         override fun onCompleted() {
-            finishLatch.countDown()
+            close()
             Log.d(TAG, "Done")
         }
     })!!
@@ -69,7 +65,7 @@ class FlowerServiceRunnable<X : Any, Y : Any>
         } else if (message.hasEvaluateIns()) {
             handleEvaluateIns(message)
         } else {
-            throw Error("Unreachable! Unknown client message")
+            throw Error("Unknown client message $message.")
         }
         requestObserver.onNext(clientMessage)
         callback("Response sent to the server")
@@ -127,6 +123,15 @@ class FlowerServiceRunnable<X : Any, Y : Any>
 
     private fun weightsFromLayers(layers: List<ByteString>) =
         layers.map { ByteBuffer.wrap(it.toByteArray()) }
+
+    private fun logStacktrace(err: Throwable) {
+        Log.e(TAG, err.stackTraceToString())
+    }
+
+    override fun close() {
+        finishLatch.countDown()
+        flowerServerChannel.shutdown()
+    }
 
     companion object {
         private const val TAG = "Flower Service Runnable"

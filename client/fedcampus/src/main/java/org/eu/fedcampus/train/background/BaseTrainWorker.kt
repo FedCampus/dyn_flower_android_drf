@@ -49,11 +49,11 @@ open class BaseTrainWorker<X : Any, Y : Any>(
         loadData(context, flowerClient, participantId)
         Log.i(TAG, "Loaded data.")
 
-        val flowerService = train.start(trainCallback)
-        Log.i(TAG, "Training.")
-
-        withContext(Dispatchers.IO) {
-            flowerService.finishLatch.await()
+        train.start(trainCallback).use {
+            Log.i(TAG, "Training.")
+            withContext(Dispatchers.IO) {
+                it.finishLatch.await()
+            }
         }
         Log.i(TAG, "Finished.")
 
