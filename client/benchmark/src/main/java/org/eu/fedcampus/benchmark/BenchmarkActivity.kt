@@ -9,8 +9,10 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.webkit.URLUtil
 import androidx.appcompat.app.AppCompatActivity
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.WorkManager
 import org.eu.fedcampus.benchmark.databinding.ActivityBenchmarkBinding
+import org.eu.fedcampus.train.background.BaseTrainWorker
 import org.eu.fedcampus.train.background.fastTrainWorkRequest
 import org.eu.fedcampus.train.background.trainWorkerData
 import org.eu.fedcampus.train.helpers.deviceId
@@ -46,7 +48,11 @@ class BenchmarkActivity : AppCompatActivity() {
         val inputData = trainWorkerData(url, deviceId(this), uri, 1)
         val trainWork =
             fastTrainWorkRequest<BenchmarkCifar10Worker, Float3DArray, FloatArray>(inputData)
-        workManager.enqueue(trainWork)
+        workManager.enqueueUniquePeriodicWork(
+            BaseTrainWorker.TAG,
+            ExistingPeriodicWorkPolicy.REPLACE,
+            trainWork
+        )
         appendLog("Submit training work request for $uri")
     }
 
