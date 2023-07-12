@@ -8,6 +8,8 @@ import androidx.work.Data
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.eu.fedcampus.train.FlowerClient
 import org.eu.fedcampus.train.SampleSpec
 import org.eu.fedcampus.train.Train
@@ -47,7 +49,12 @@ open class BaseTrainWorker<X : Any, Y : Any>(
         loadData(context, flowerClient, participantId)
         Log.i(TAG, "Loaded data.")
 
-        train.start(trainCallback)
+        val flowerService = train.start(trainCallback)
+        Log.i(TAG, "Training.")
+
+        withContext(Dispatchers.IO) {
+            flowerService.finishLatch.await()
+        }
         Log.i(TAG, "Finished.")
 
         Result.success()
