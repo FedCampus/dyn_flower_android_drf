@@ -140,8 +140,10 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
     }
 
     override fun close() {
-        finishLatch.countDown()
-        flowerServerChannel.shutdown()
+        if (finishLatch.count > 0) {
+            finishLatch.countDown()
+            flowerServerChannel.shutdown()
+        }
     }
 
     companion object {
