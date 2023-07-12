@@ -26,9 +26,11 @@ import java.util.concurrent.TimeUnit
 /**
  * Inherit your training worker from this and fill in the constructor parameters
  * (except for [context] and `params`) with concrete values.
+ * @param icon Small icon for the notification.
  */
 open class BaseTrainWorker<X : Any, Y : Any>(
     val context: Context, params: WorkerParameters,
+    val icon: Int,
     val sampleSpec: SampleSpec<X, Y>,
     val dataType: String,
     val loadData: suspend (Context, FlowerClient<X, Y>, Int) -> Unit,
@@ -40,7 +42,7 @@ open class BaseTrainWorker<X : Any, Y : Any>(
     lateinit var train: Train<X, Y>
 
     override suspend fun doWork() = try {
-        setForeground(ForegroundInfo(1, createNotification("Training", context)))
+        setForeground(ForegroundInfo(1, createNotification("Training", context, icon)))
         train()
     } catch (err: Throwable) {
         Log.e(TAG, err.stackTraceToString())
@@ -118,7 +120,7 @@ fun wifiConstraints() = Constraints.Builder().setRequiredNetworkType(NetworkType
  *
  * Adopted from `codelab-android-workmanager`.
  */
-fun createNotification(message: String, context: Context): Notification {
+fun createNotification(message: String, context: Context, icon: Int): Notification {
     // Make a channel if necessary
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         // Create the NotificationChannel, but only on API 26+ because
@@ -136,6 +138,7 @@ fun createNotification(message: String, context: Context): Notification {
 
     // Create the notification
     return NotificationCompat.Builder(context, CHANNEL_ID)
+        .setSmallIcon(icon)
         .setContentTitle("FedCampus")
         .setContentText(message)
         .setPriority(NotificationCompat.PRIORITY_HIGH)
