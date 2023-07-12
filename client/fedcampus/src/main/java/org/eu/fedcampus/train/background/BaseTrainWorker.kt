@@ -85,8 +85,8 @@ fun trainWorkerData(backendUrl: String, deviceId: Long, flowerHost: String, part
 @Suppress("unused")
 inline fun <reified W : BaseTrainWorker<X, Y>, X : Any, Y : Any> trainWorkRequest(inputData: Data) =
     PeriodicWorkRequestBuilder<W>(
-        8, TimeUnit.HOURS,
-        6, TimeUnit.HOURS,
+        1, TimeUnit.HOURS,
+        50, TimeUnit.MINUTES,
     ).setConstraints(realIdleConstraints()).setInputData(inputData).addTag(BaseTrainWorker.TAG)
         .build()
 
