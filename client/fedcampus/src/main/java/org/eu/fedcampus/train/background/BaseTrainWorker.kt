@@ -88,8 +88,8 @@ inline fun <reified W : BaseTrainWorker<X, Y>, X : Any, Y : Any> trainWorkReques
 
 inline fun <reified W : BaseTrainWorker<X, Y>, X : Any, Y : Any> fastTrainWorkRequest(inputData: Data) =
     PeriodicWorkRequestBuilder<W>(
-        8, TimeUnit.MINUTES,
-        6, TimeUnit.MINUTES,
+        15, TimeUnit.MINUTES, // Minimum interval allowed.
+        10, TimeUnit.MINUTES,
     ).setConstraints(wifiConstraints())
         .setInputData(inputData)
         .addTag(BaseTrainWorker.TAG).build()
