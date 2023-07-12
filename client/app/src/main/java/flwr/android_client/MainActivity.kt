@@ -1,9 +1,7 @@
 package flwr.android_client
 
-import android.annotation.SuppressLint
 import android.icu.text.SimpleDateFormat
 import android.os.Bundle
-import android.provider.Settings
 import android.text.TextUtils
 import android.text.method.ScrollingMovementMethod
 import android.util.Log
@@ -20,11 +18,13 @@ import androidx.room.Room
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.eu.fedcampus.train.FlowerClient
-import org.eu.fedcampus.train.SampleSpec
 import org.eu.fedcampus.train.Train
-import org.eu.fedcampus.train.helpers.classifierAccuracy
+import org.eu.fedcampus.train.examples.cifar10.DATA_TYPE
+import org.eu.fedcampus.train.examples.cifar10.Float3DArray
+import org.eu.fedcampus.train.examples.cifar10.loadData
+import org.eu.fedcampus.train.examples.cifar10.sampleSpec
+import org.eu.fedcampus.train.helpers.deviceId
 import org.eu.fedcampus.train.helpers.loadMappedFile
-import org.eu.fedcampus.train.helpers.negativeLogLikelihoodLoss
 import java.util.*
 
 @Suppress("DEPRECATION")
@@ -156,27 +156,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun stringToLong(string: String): Long {
-        val hashCode = string.hashCode().toLong()
-        val secondHashCode = string.reversed().hashCode().toLong()
-        return (hashCode shl 32) or secondHashCode
-    }
-
-    @SuppressLint("HardwareIds")
     @Throws
     suspend fun connectInBackground(host: String, port: Int) {
         val backendUrl = "http://$host:$port"
         Log.i(TAG, "Backend URL: $backendUrl")
-        val sampleSpec = SampleSpec<Float3DArray, FloatArray>(
-            { it.toTypedArray() },
-            { it.toTypedArray() },
-            { Array(it) { FloatArray(CLASSES.size) } },
-            ::negativeLogLikelihoodLoss,
-            ::classifierAccuracy,
-        )
-        train = Train(this, backendUrl, sampleSpec, db.modelDao())
-        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-        train.enableTelemetry(stringToLong(deviceId))
+        train = Train(this, backendUrl, sampleSpec(), db.modelDao())
+        train.enableTelemetry(deviceId(this))
         val modelFile = train.prepareModel(DATA_TYPE)
         val serverData = train.getServerInfo(freshStartCheckbox.isChecked)
         freshStartCheckbox.isEnabled = false
@@ -223,6 +208,3 @@ class MainActivity : AppCompatActivity() {
 }
 
 private const val TAG = "MainActivity"
-private const val DATA_TYPE = "CIFAR10_32x32x3"
-
-typealias Float3DArray = Array<Array<FloatArray>>

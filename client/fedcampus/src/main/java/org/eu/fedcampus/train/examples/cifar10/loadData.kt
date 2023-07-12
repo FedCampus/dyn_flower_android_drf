@@ -1,4 +1,4 @@
-package flwr.android_client
+package org.eu.fedcampus.train.examples.cifar10
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -31,15 +31,15 @@ suspend fun readAssetLines(
 suspend fun loadData(
     context: Context,
     flowerClient: FlowerClient<Float3DArray, FloatArray>,
-    device_id: Int
+    participantId: Int
 ) {
-    readAssetLines(context, "data/partition_${device_id - 1}_train.txt") { index, line ->
+    readAssetLines(context, "data/partition_${participantId - 1}_train.txt") { index, line ->
         if (index % 500 == 499) {
             Log.i(TAG, index.toString() + "th training image loaded")
         }
         addSample(context, flowerClient, "data/$line", true)
     }
-    readAssetLines(context, "data/partition_${device_id - 1}_test.txt") { index, line ->
+    readAssetLines(context, "data/partition_${participantId - 1}_test.txt") { index, line ->
         if (index % 500 == 499) {
             Log.i(TAG, index.toString() + "th test image loaded")
         }

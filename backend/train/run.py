@@ -55,7 +55,7 @@ def fit_config(server_round: int):
     """
     config = {
         "batch_size": 32,
-        "local_epochs": 5,
+        "local_epochs": 2,
     }
     return config
 
@@ -76,10 +76,10 @@ def flwr_server(db_conn: Connection | None, initial_parameters: Parameters | Non
 
     logger.warning("Starting Flower server.")
     try:
-        # Start Flower server for 10 rounds of federated learning
+        # Start Flower server for 3 rounds of federated learning
         start_server(
             server_address=f"0.0.0.0:{PORT}",
-            config=ServerConfig(num_rounds=10),
+            config=ServerConfig(num_rounds=3),
             strategy=strategy,
         )
     except KeyboardInterrupt:
