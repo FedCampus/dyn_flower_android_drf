@@ -15,6 +15,7 @@ import org.eu.fedcampus.benchmark.databinding.ActivityBenchmarkBinding
 import org.eu.fedcampus.train.background.BaseTrainWorker
 import org.eu.fedcampus.train.background.fastTrainWorkRequest
 import org.eu.fedcampus.train.background.trainWorkerData
+import org.eu.fedcampus.train.examples.cifar10.Float3DArray
 import org.eu.fedcampus.train.helpers.deviceId
 import java.text.SimpleDateFormat
 import java.util.Date

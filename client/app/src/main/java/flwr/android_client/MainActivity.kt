@@ -18,12 +18,13 @@ import androidx.room.Room
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.eu.fedcampus.train.FlowerClient
-import org.eu.fedcampus.train.SampleSpec
 import org.eu.fedcampus.train.Train
-import org.eu.fedcampus.train.helpers.classifierAccuracy
+import org.eu.fedcampus.train.examples.cifar10.DATA_TYPE
+import org.eu.fedcampus.train.examples.cifar10.Float3DArray
+import org.eu.fedcampus.train.examples.cifar10.loadData
+import org.eu.fedcampus.train.examples.cifar10.sampleSpec
 import org.eu.fedcampus.train.helpers.deviceId
 import org.eu.fedcampus.train.helpers.loadMappedFile
-import org.eu.fedcampus.train.helpers.negativeLogLikelihoodLoss
 import java.util.*
 
 @Suppress("DEPRECATION")
@@ -206,15 +207,4 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-fun sampleSpec() = SampleSpec<Float3DArray, FloatArray>(
-    { it.toTypedArray() },
-    { it.toTypedArray() },
-    { Array(it) { FloatArray(CLASSES.size) } },
-    ::negativeLogLikelihoodLoss,
-    ::classifierAccuracy,
-)
-
 private const val TAG = "MainActivity"
-const val DATA_TYPE = "CIFAR10_32x32x3"
-
-typealias Float3DArray = Array<Array<FloatArray>>

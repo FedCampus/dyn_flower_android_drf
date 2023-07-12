@@ -1,4 +1,4 @@
-package flwr.android_client
+package org.eu.fedcampus.train.examples.cifar10
 
 import android.content.Context
 import android.graphics.Bitmap
