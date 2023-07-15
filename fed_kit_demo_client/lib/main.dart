@@ -45,7 +45,7 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       logs.add(Text(message));
       scrollController.animateTo(
-        scrollController.position.maxScrollExtent,
+        scrollController.position.maxScrollExtent + 32.0,
         duration: const Duration(milliseconds: 100),
         curve: Curves.easeInOut,
       );
@@ -114,15 +114,14 @@ class _HomePageState extends State<HomePage> {
       ),
       const Text('Activity Log'),
       Expanded(
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
+        child: ListView.builder(
           controller: scrollController,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: logs,
-          ),
+          padding: const EdgeInsets.only(
+              top: 16.0, bottom: 32.0, left: 12.0, right: 12.0),
+          itemCount: logs.length,
+          itemBuilder: (context, index) => logs[index],
         ),
-      ),
+      )
     ];
 
     return Scaffold(
