@@ -41,8 +41,12 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    var clientPartitionIdController = TextEditingController();
+    var flServerIPController = TextEditingController();
+    var flServerPortController = TextEditingController();
     var children = [
       TextFormField(
+        controller: clientPartitionIdController,
         decoration: const InputDecoration(
           labelText: 'Client Partition ID (1-10)',
           filled: true,
@@ -50,6 +54,7 @@ class _HomePageState extends State<HomePage> {
         keyboardType: TextInputType.number,
       ),
       TextFormField(
+        controller: flServerIPController,
         decoration: const InputDecoration(
           labelText: 'FL Server IP',
           filled: true,
@@ -57,6 +62,7 @@ class _HomePageState extends State<HomePage> {
         keyboardType: TextInputType.url,
       ),
       TextFormField(
+        controller: flServerPortController,
         decoration: const InputDecoration(
           labelText: 'FL Server Port',
           filled: true,
@@ -65,14 +71,16 @@ class _HomePageState extends State<HomePage> {
       ),
       ElevatedButton(
         onPressed: () {
-          // TODO: Connect.
+          var clientPartitionId = clientPartitionIdController.text;
+          var flServerIP = flServerIPController.text;
+          var flServerPort = flServerPortController.text;
+          appendLog(
+              'Connecting with Partition ID: $clientPartitionId, Server IP: $flServerIP, Port: $flServerPort');
         },
         child: const Text('Connect'),
       ),
       ElevatedButton(
-        onPressed: () {
-          // TODO: Train.
-        },
+        onPressed: () => appendLog('Training started.'),
         child: const Text('Train'),
       ),
       const Text('Activity Log'),
