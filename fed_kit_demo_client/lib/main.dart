@@ -30,20 +30,19 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  var logs = const Text('Welcome to Flower!\n');
+  var logs = [const Text('Welcome to Flower!')];
+  var clientPartitionIdController = TextEditingController();
+  var flServerIPController = TextEditingController();
+  var flServerPortController = TextEditingController();
 
   appendLog(String message) {
     setState(() {
-      var newText = '${logs.data!}$message\n';
-      logs = Text(newText);
+      logs.add(Text(message));
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    var clientPartitionIdController = TextEditingController();
-    var flServerIPController = TextEditingController();
-    var flServerPortController = TextEditingController();
     var children = [
       TextFormField(
         controller: clientPartitionIdController,
@@ -80,17 +79,18 @@ class _HomePageState extends State<HomePage> {
         child: const Text('Connect'),
       ),
       ElevatedButton(
-        onPressed: () => appendLog('Training started.'),
+        onPressed: () {
+          appendLog('Training started.');
+        },
         child: const Text('Train'),
       ),
       const Text('Activity Log'),
       Expanded(
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 16.0),
-            padding: const EdgeInsets.all(16.0),
-            child: logs,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: logs,
           ),
         ),
       ),
