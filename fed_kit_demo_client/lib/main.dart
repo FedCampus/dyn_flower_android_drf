@@ -56,7 +56,7 @@ class _HomePageState extends State<HomePage> {
     try {
       clientPartitionId = int.parse(clientPartitionIdController.text);
     } catch (e) {
-      appendLog('Invalid client partition id!');
+      return appendLog('Invalid client partition id!');
     }
     try {
       flServerIP = Uri.parse(flServerIPController.text);
@@ -64,12 +64,12 @@ class _HomePageState extends State<HomePage> {
         throw Exception();
       }
     } catch (e) {
-      appendLog('Invalid Flower server IP!');
+      return appendLog('Invalid Flower server IP!');
     }
     try {
       flServerPort = int.parse(flServerPortController.text);
     } catch (e) {
-      appendLog('Invalid Flower server port!');
+      return appendLog('Invalid Flower server port!');
     }
     appendLog(
         'Connecting with Partition ID: $clientPartitionId, Server IP: $flServerIP, Port: $flServerPort');
@@ -102,16 +102,18 @@ class _HomePageState extends State<HomePage> {
         ),
         keyboardType: TextInputType.number,
       ),
-      ElevatedButton(
-        onPressed: handleInput,
-        child: const Text('Connect'),
-      ),
-      ElevatedButton(
-        onPressed: () {
-          appendLog('Training started.');
-        },
-        child: const Text('Train'),
-      ),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        ElevatedButton(
+          onPressed: handleInput,
+          child: const Text('Connect'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            appendLog('Training started.');
+          },
+          child: const Text('Train'),
+        ),
+      ]),
       const Text('Activity Log'),
       Expanded(
         child: ListView.builder(
