@@ -44,11 +44,6 @@ class _HomePageState extends State<HomePage> {
   appendLog(String message) {
     setState(() {
       logs.add(Text(message));
-      scrollController.animateTo(
-        scrollController.position.maxScrollExtent + 32.0,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeInOut,
-      );
     });
   }
 
@@ -118,10 +113,11 @@ class _HomePageState extends State<HomePage> {
       Expanded(
         child: ListView.builder(
           controller: scrollController,
+          reverse: true,
           padding: const EdgeInsets.only(
               top: 16.0, bottom: 32.0, left: 12.0, right: 12.0),
           itemCount: logs.length,
-          itemBuilder: (context, index) => logs[index],
+          itemBuilder: (context, index) => logs[logs.length - index - 1],
         ),
       )
     ];
