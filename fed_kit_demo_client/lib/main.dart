@@ -1,5 +1,6 @@
 import 'dart:core';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 main() {
   runApp(const App());
@@ -47,7 +48,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  handleInput() {
+  handleInput() async {
     try {
       clientPartitionId = int.parse(clientPartitionIdController.text);
     } catch (e) {
@@ -68,6 +69,13 @@ class _HomePageState extends State<HomePage> {
     }
     appendLog(
         'Connecting with Partition ID: $clientPartitionId, Server IP: $flServerIP, Port: $flServerPort');
+    final flServerUrl =
+        flServerIP!.replace(port: flServerPort, path: '/train/advertised');
+    final response =
+        await http.post(flServerUrl, body: {'data_type': 'CIFAR10_32x32x3'});
+    appendLog('Sending to $flServerUrl.');
+    appendLog(
+        "Response status: ${response.statusCode}, body: ${response.body}");
   }
 
   @override
