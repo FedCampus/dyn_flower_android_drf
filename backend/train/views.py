@@ -1,14 +1,18 @@
 import logging
 from typing import OrderedDict
 
+from django.core.files.uploadedfile import UploadedFile
 from rest_framework import permissions
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.request import MultiValueDict
 from rest_framework.response import Response
 from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 from rest_framework.views import Request
 from train.models import TFLiteModel, TrainingDataType
 from train.scheduler import server
 from train.serializers import *
+
+from backend.settings import STATICFILES_DIRS
 
 logger = logging.getLogger(__name__)
 
@@ -53,3 +57,26 @@ def request_server(request: Request):
         return Response("Model not found", HTTP_404_NOT_FOUND)
     response = server(model, data["start_fresh"])
     return Response(response.__dict__)
+
+
+def file_in_request(request: Request):
+    files = request.FILES
+    if isinstance(files, MultiValueDict):
+        file = files.get("file")
+        if isinstance(file, UploadedFile):
+            return file
+
+
+@api_view(["POST"])
+@permission_classes((permissions.AllowAny,))
+def upload_file(request: Request):
+    # TODO: Other parameters.
+    file = file_in_request(request)
+    if file is None:
+        return Response("No file in request.", HTTP_400_BAD_REQUEST)
+    name = file.name
+    # TODO: Validate unique file name.
+    with open(STATICFILES_DIRS[0] / name, "wb") as fd:
+        fd.write(file.file.read())
+    # TODO: Save TFLiteModel object.
+    return Response("ok")
