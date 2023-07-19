@@ -19,7 +19,7 @@ class PostServerDataSerializer(serializers.Serializer):
     start_fresh = serializers.BooleanField(required=False, default=False)  # type: ignore
 
 
-# Always change together with `fed_kit.py`.
+# Always change together with `upload` in `fed_kit.py`.
 class UploadDataSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=256)
     layers_sizes = serializers.ListField(child=serializers.IntegerField(min_value=0))

@@ -14,6 +14,7 @@ import requests
 DEFAULT_URL = "http://localhost:8000/"
 
 
+# Always change together with `UploadDataSerializer` in `train.serializers`.
 def upload(
     file: str,
     name: str,
