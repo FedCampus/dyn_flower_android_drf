@@ -6,7 +6,7 @@ from . import FedMCRNNModel
 DIR = path.dirname(__file__)
 
 
-TFLITE_FILE = f"fed_mcnrr.tflite"
+TFLITE_FILE = f"fed_mcnrr2.tflite"
 
 
 def main():
