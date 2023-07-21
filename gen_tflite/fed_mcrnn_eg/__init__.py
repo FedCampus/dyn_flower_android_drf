@@ -33,8 +33,12 @@ class FedMCRNNModel(BaseTFLiteModel):
         self.model = tf.keras.models.Sequential(
             [tf.keras.Input(shape=tuple(self.X_SHAPE))]
             + repeat3(conv_layers)
-            + [tf.keras.layers.Dense(16, activation="relu")]
+            + [
+                tf.keras.layers.Dense(56, activation="relu"),
+                tf.keras.layers.Flatten(),
+                tf.keras.layers.RepeatVector(7),
+            ]
             + repeat3(recurrent_layers)
-            + [tf.keras.layers.Dense(1, activation="relu")]
+            + [tf.keras.layers.Dense(1)]
         )
         self.model.compile(loss=tf.keras.losses.MeanSquaredError())

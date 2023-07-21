@@ -81,6 +81,12 @@ The above script generates the `.tflite` file at `../my_model.tflite`. Move that
 
 Go to `../backend` and add the model into your database.
 
+To suppress Tensorflow printing, try:
+
+```sh
+export TF_CPP_MIN_LOG_LEVEL=2
+```
+
 For validation, see the `toy_regression_eg/` example.
 
 ## Running demo
