@@ -10,6 +10,16 @@ fun <X> negativeLogLikelihoodLoss(
     -ln(logit[sample.label.argmax()])
 }
 
+fun <X> maxSquaredErrorLoss(
+    samples: MutableList<Sample<X, FloatArray>>,
+    logits: Array<FloatArray>
+): Float = averageLossWith(samples, logits) { sample, logit ->
+    sample.label.zip(logit).fold(0f) { acc, (real, prediction) ->
+        val diff = real - prediction
+        diff * diff + acc
+    }
+}
+
 fun <X, Y> averageLossWith(
     samples: MutableList<Sample<X, Y>>,
     logits: Array<Y>,
