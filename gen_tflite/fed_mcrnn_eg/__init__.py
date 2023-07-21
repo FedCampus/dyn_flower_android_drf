@@ -39,6 +39,9 @@ class FedMCRNNModel(BaseTFLiteModel):
                 tf.keras.layers.RepeatVector(7),
             ]
             + repeat3(recurrent_layers)
-            + [tf.keras.layers.Dense(1)]
+            + [
+                tf.keras.layers.Flatten(),
+                tf.keras.layers.Dense(1),
+            ]
         )
         self.model.compile(loss=tf.keras.losses.MeanSquaredError())
