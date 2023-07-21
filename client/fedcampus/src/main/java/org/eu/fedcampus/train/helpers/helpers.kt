@@ -38,7 +38,7 @@ infix fun <T, R> Iterable<T>.lazyZip(other: Array<out R>): Sequence<Pair<T, R>> 
     }
 }
 
-infix fun <T, R> Iterable<T>.lazyMap(transform: (T) -> R) = sequence {
+fun <T, R> Iterable<T>.lazyMap(transform: (T) -> R) = sequence {
     iterator().forEach { yield(transform(it)) }
 }
 

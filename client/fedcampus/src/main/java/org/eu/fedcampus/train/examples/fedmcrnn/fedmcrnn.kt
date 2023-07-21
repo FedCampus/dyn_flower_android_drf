@@ -12,6 +12,6 @@ fun sampleSpec() = SampleSpec<Float2DArray, FloatArray>(
     ::placeholderAccuracy,
 )
 
-const val DATA_TYPE = "FedMCRNN_6x7"
+const val DATA_TYPE = "FedMCRNN_7x8"
 
 typealias Float2DArray = Array<FloatArray>
