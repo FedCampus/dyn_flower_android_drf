@@ -100,6 +100,7 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
         if (start != null) {
             val end = System.currentTimeMillis()
             val job = scope.launch { train.fitInsTelemetry(start, end) }
+            cleanUpJobs()
             jobs.add(job)
         }
         return fitResAsProto(weightsByteBuffers(), sampleSize)
@@ -120,6 +121,7 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
             val end = System.currentTimeMillis()
             val job =
                 scope.launch { train.evaluateInsTelemetry(start, end, loss, accuracy, sampleSize) }
+            cleanUpJobs()
             jobs.add(job)
         }
         return evaluateResAsProto(loss, sampleSize)
@@ -129,6 +131,10 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
 
     private fun weightsFromLayers(layers: List<ByteString>) =
         layers.map { ByteBuffer.wrap(it.toByteArray()) }
+
+    private fun cleanUpJobs() {
+        jobs.removeAll { it.isCompleted }
+    }
 
     private fun logStacktrace(err: Throwable) {
         Log.e(TAG, err.stackTraceToString())
