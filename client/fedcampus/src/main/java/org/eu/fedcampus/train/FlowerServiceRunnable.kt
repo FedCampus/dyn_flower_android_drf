@@ -52,7 +52,6 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
 
         override fun onCompleted() {
             close()
-            Log.d(TAG, "Done")
         }
     })!!
 
@@ -130,8 +129,11 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
 
     override fun close() {
         if (finishLatch.count > 0) {
-            finishLatch.countDown()
             flowerServerChannel.shutdown()
+            Log.d(TAG, "Exiting.")
+            finishLatch.countDown()
+        } else {
+            Log.w(TAG, "Second Exit.")
         }
     }
 
