@@ -11,8 +11,11 @@ import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.eu.fedcampus.train.db.TFLiteModel
 import org.eu.fedcampus.train.helpers.assertIntsEqual
@@ -36,6 +39,7 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
     private val sampleSize: Int
         get() = flowerClient.trainingSamples.size
     val finishLatch = CountDownLatch(1)
+    val jobs = mutableListOf<Job>()
 
     val asyncStub = FlowerServiceGrpc.newStub(flowerServerChannel)!!
     val requestObserver = asyncStub.join(object : StreamObserver<ServerMessage> {
@@ -95,7 +99,8 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
         flowerClient.fit(epochs, lossCallback = { callback("Average loss: ${it.average()}.") })
         if (start != null) {
             val end = System.currentTimeMillis()
-            scope.launch { train.fitInsTelemetry(start, end) }
+            val job = scope.launch { train.fitInsTelemetry(start, end) }
+            jobs.add(job)
         }
         return fitResAsProto(weightsByteBuffers(), sampleSize)
     }
@@ -113,7 +118,9 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
         callback("Test Accuracy after this round = $accuracy")
         if (start != null) {
             val end = System.currentTimeMillis()
-            scope.launch { train.evaluateInsTelemetry(start, end, loss, accuracy, sampleSize) }
+            val job =
+                scope.launch { train.evaluateInsTelemetry(start, end, loss, accuracy, sampleSize) }
+            jobs.add(job)
         }
         return evaluateResAsProto(loss, sampleSize)
     }
@@ -130,6 +137,7 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
     override fun close() {
         if (finishLatch.count > 0) {
             flowerServerChannel.shutdown()
+            runBlocking { jobs.joinAll() }
             Log.d(TAG, "Exiting.")
             finishLatch.countDown()
         } else {
