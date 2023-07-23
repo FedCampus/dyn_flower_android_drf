@@ -24,10 +24,10 @@ fun <X, Y> averageLossWith(
     samples: MutableList<Sample<X, Y>>,
     logits: Array<Y>,
     loss: (Sample<X, Y>, logit: Y) -> Float
-): Float {
+) = if (samples.isEmpty()) 0f else {
     var lossSum = 0f
     for ((sample, logit) in samples lazyZip logits) {
         lossSum += loss(sample, logit)
     }
-    return lossSum / samples.size
+    lossSum / samples.size
 }
