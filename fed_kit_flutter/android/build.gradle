@@ -1,4 +1,4 @@
-group 'com.example.fed_kit_flutter'
+group 'org.eu.fedcampus.fed_kit_flutter'
 version '1.0-SNAPSHOT'
 
 buildscript {

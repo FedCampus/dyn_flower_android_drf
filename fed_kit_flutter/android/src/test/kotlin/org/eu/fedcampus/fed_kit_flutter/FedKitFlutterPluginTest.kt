@@ -1,4 +1,4 @@
-package com.example.fed_kit_flutter
+package org.eu.fedcampus.fed_kit_flutter
 
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
