@@ -1,7 +1,14 @@
-library fed_kit_flutter;
+// You have generated a new plugin project without specifying the `--platforms`
+// flag. A plugin project with no platform support was generated. To add a
+// platform, run `flutter create -t plugin --platforms <platforms> .` under the
+// same directory. You can also find a detailed instruction on how to add
+// platforms in the `pubspec.yaml` at
+// https://flutter.dev/docs/development/packages-and-plugins/developing-packages#plugin-platforms.
 
-/// A Calculator.
-class Calculator {
-  /// Returns [value] plus 1.
-  int addOne(int value) => value + 1;
+import 'fed_kit_flutter_platform_interface.dart';
+
+class FedKitFlutter {
+  Future<String?> getPlatformVersion() {
+    return FedKitFlutterPlatform.instance.getPlatformVersion();
+  }
 }
