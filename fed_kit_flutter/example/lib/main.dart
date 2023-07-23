@@ -26,11 +26,8 @@ class _MyAppState extends State<MyApp> {
     initPlatformState();
   }
 
-  // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
     String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    // We also handle the message potentially returning null.
     try {
       platformVersion = await _fedKitFlutterPlugin.getPlatformVersion() ??
           'Unknown platform version';
@@ -49,15 +46,15 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  int? clientPartitionId;
-  Uri? flServerIP;
-  int? flServerPort;
+  late int clientPartitionId;
+  late Uri flServerIP;
+  late int flServerPort;
 
-  var logs = [const Text('Welcome to Flower!')];
-  var clientPartitionIdController = TextEditingController();
-  var flServerIPController = TextEditingController();
-  var flServerPortController = TextEditingController();
-  var scrollController = ScrollController();
+  final logs = [const Text('Welcome to Flower!')];
+  final clientPartitionIdController = TextEditingController();
+  final flServerIPController = TextEditingController();
+  final flServerPortController = TextEditingController();
+  final scrollController = ScrollController();
 
   appendLog(String message) {
     setState(() {
@@ -73,7 +70,7 @@ class _MyAppState extends State<MyApp> {
     }
     try {
       flServerIP = Uri.parse(flServerIPController.text);
-      if (!flServerIP!.isScheme('http')) {
+      if (!flServerIP.isScheme('http')) {
         throw Exception();
       }
     } catch (e) {
@@ -87,7 +84,7 @@ class _MyAppState extends State<MyApp> {
     appendLog(
         'Connecting with Partition ID: $clientPartitionId, Server IP: $flServerIP, Port: $flServerPort');
     final flServerUrl =
-        flServerIP!.replace(port: flServerPort, path: '/train/advertised');
+        flServerIP.replace(port: flServerPort, path: '/train/advertised');
     final response =
         await http.post(flServerUrl, body: {'data_type': 'CIFAR10_32x32x3'});
     appendLog('Sending to $flServerUrl.');
@@ -97,7 +94,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    var children = [
+    final children = [
       TextFormField(
         controller: clientPartitionIdController,
         decoration: const InputDecoration(
