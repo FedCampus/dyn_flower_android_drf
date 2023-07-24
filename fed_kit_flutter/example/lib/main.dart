@@ -4,6 +4,9 @@ import 'package:http/http.dart' as http;
 
 import 'package:flutter/services.dart';
 import 'package:fed_kit_flutter/fed_kit_flutter.dart';
+import 'package:logger/logger.dart';
+
+final logger = Logger();
 
 void main() {
   runApp(const MyApp());
@@ -57,6 +60,7 @@ class _MyAppState extends State<MyApp> {
   final scrollController = ScrollController();
 
   appendLog(String message) {
+    logger.d('appendLog: $message');
     setState(() {
       logs.add(Text(message));
     });
@@ -85,11 +89,16 @@ class _MyAppState extends State<MyApp> {
         'Connecting with Partition ID: $clientPartitionId, Server IP: $flServerIP, Port: $flServerPort');
     final flServerUrl =
         flServerIP.replace(port: flServerPort, path: '/train/advertised');
-    final response =
-        await http.post(flServerUrl, body: {'data_type': 'CIFAR10_32x32x3'});
-    appendLog('Sending to $flServerUrl.');
-    appendLog(
-        "Response status: ${response.statusCode}, body: ${response.body}");
+    try {
+      final response =
+          await http.post(flServerUrl, body: {'data_type': 'CIFAR10_32x32x3'});
+      appendLog('Sending to $flServerUrl.');
+      appendLog(
+          "Response status: ${response.statusCode}, body: ${response.body}");
+    } catch (error, stacktrace) {
+      appendLog('Request to $flServerUrl failed: $error');
+      logger.e(stacktrace);
+    }
   }
 
   @override
