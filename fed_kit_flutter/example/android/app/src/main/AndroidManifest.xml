@@ -2,8 +2,7 @@
 
     <application
             android:label="fed_kit_flutter_example"
-            android:name="${applicationName}"
-            android:icon="@mipmap/ic_launcher">
+            android:name="${applicationName}">
         <activity
                 android:name=".MainActivity"
                 android:exported="true"
