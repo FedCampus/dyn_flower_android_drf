@@ -1,4 +1,3 @@
-
 import 'fed_kit_flutter_platform_interface.dart';
 
 class FedKitFlutter {
