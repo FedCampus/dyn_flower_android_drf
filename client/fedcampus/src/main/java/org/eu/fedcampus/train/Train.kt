@@ -150,15 +150,27 @@ class Train<X : Any, Y : Any> constructor(
         }
     }
 
+    @Throws
     private fun doStart(
         callback: (String) -> Unit,
         model: TFLiteModel,
         flowerClient: FlowerClient<X, Y>,
         channel: ManagedChannel
-    ) = FlowerServiceRunnable(channel, this, model, flowerClient, callback).let {
-        state = TrainState.Training(model, flowerClient, it)
-        it
-    }
+    ) =
+        if (flowerClient.trainingSamples.isEmpty() || flowerClient.testSamples.isEmpty()) {
+            throw Error("No data loaded for training")
+        } else {
+            FlowerServiceRunnable(
+                channel,
+                this,
+                model,
+                flowerClient,
+                callback
+            ).let {
+                state = TrainState.Training(model, flowerClient, it)
+                it
+            }
+        }
 
     /**
      * Ensure that telemetry is enabled and [sessionId] is non-null.

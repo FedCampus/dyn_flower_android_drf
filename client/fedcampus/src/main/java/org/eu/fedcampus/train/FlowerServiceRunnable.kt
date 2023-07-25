@@ -99,7 +99,7 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
         flowerClient.fit(epochs, lossCallback = { callback("Average loss: ${it.average()}.") })
         if (start != null) {
             val end = System.currentTimeMillis()
-            val job = scope.launch { train.fitInsTelemetry(start, end) }
+            val job = launchJob { train.fitInsTelemetry(start, end) }
             cleanUpJobs()
             jobs.add(job)
         }
@@ -120,7 +120,7 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
         if (start != null) {
             val end = System.currentTimeMillis()
             val job =
-                scope.launch { train.evaluateInsTelemetry(start, end, loss, accuracy, sampleSize) }
+                launchJob { train.evaluateInsTelemetry(start, end, loss, accuracy, sampleSize) }
             cleanUpJobs()
             jobs.add(job)
         }
@@ -131,6 +131,14 @@ class FlowerServiceRunnable<X : Any, Y : Any> @Throws constructor(
 
     private fun weightsFromLayers(layers: List<ByteString>) =
         layers.map { ByteBuffer.wrap(it.toByteArray()) }
+
+    private fun launchJob(call: suspend () -> Unit) = scope.launch {
+        try {
+            call()
+        } catch (err: Throwable) {
+            logStacktrace(err)
+        }
+    }
 
     private fun cleanUpJobs() {
         jobs.removeAll { it.isCompleted }
