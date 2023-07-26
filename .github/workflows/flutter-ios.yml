@@ -16,6 +16,7 @@ jobs:
           path: |
             ~/.pub-cache/
             fed_kit_client/build/
+            fed_kit_client/.dart_tool/
           key: ${{ runner.os }}-flutter-ios
       - name: Install dependencies
         run: |
