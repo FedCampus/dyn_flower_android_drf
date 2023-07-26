@@ -1,7 +1,6 @@
 """`fig_config` and code in `server` are copied from Flower Android example."""
 import pickle
 from logging import getLogger
-from multiprocessing.connection import Connection
 
 import requests
 from flwr.common import FitRes, Parameters, Scalar
@@ -17,8 +16,6 @@ logger = getLogger(__name__)
 
 
 class FedAvgAndroidSave(FedAvgAndroid):
-    db_conn: Connection | None = None
-
     def aggregate_fit(
         self,
         server_round: int,
@@ -62,7 +59,7 @@ def fit_config(server_round: int):
     return config
 
 
-def flwr_server(db_conn: Connection | None, initial_parameters: Parameters | None):
+def flwr_server(initial_parameters: Parameters | None):
     # TODO: Make configurable.
     strategy = FedAvgAndroidSave(
         fraction_fit=1.0,
@@ -74,7 +71,6 @@ def flwr_server(db_conn: Connection | None, initial_parameters: Parameters | Non
         on_fit_config_fn=fit_config,
         initial_parameters=initial_parameters,
     )
-    strategy.db_conn = db_conn
 
     logger.warning("Starting Flower server.")
     try:
@@ -86,5 +82,3 @@ def flwr_server(db_conn: Connection | None, initial_parameters: Parameters | Non
         )
     except KeyboardInterrupt:
         return
-    if db_conn is not None:
-        db_conn.send(("done", None))

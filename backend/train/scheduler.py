@@ -1,5 +1,5 @@
 from logging import getLogger
-from multiprocessing import Pipe, Process
+from multiprocessing import Process
 from threading import Thread
 
 from flwr.common import Parameters
@@ -9,33 +9,6 @@ from train.models import *
 from train.run import PORT, flwr_server
 
 logger = getLogger(__name__)
-
-
-def monitor_db_conn_once(server: "Server"):
-    kind, msg = server.db_conn.recv()
-    if kind == "done":
-        return True
-    elif kind == "save_params":
-        if not isinstance(msg, list):
-            raise ValueError(f"Wrong parameters {msg} for `save_params`.")
-        to_save = make_model_params(msg, server.model)
-        to_save.save()
-        server.update_session_end_time()
-    return False
-
-
-def monitor_db_conn(server: "Server"):
-    while not server.db_conn.closed:
-        try:
-            if monitor_db_conn_once(server):
-                break
-        except InterruptedError:
-            return
-        except Exception as err:
-            logger.error(err)
-            break
-    server.update_session_end_time()
-    logger.warning("DB monitor thread exiting.")
 
 
 def model_params(model: TFLiteModel):
@@ -59,12 +32,9 @@ class Server:
         self.model = model
         self.start_fresh = start_fresh
         params = None if start_fresh else model_params(model)
-        db_conn, self.db_conn = Pipe()
         self.session = TrainingSession(tflite_model=model)
-        self.process = Process(target=flwr_server, args=(db_conn, params))
+        self.process = Process(target=flwr_server, args=(params,))
         self.process.start()
-        self.thread = Thread(target=monitor_db_conn, args=(self,))
-        self.thread.start()
         self.timeout = Thread(target=Process.join, args=(self.process, TWELVE_HOURS))
         self.timeout.start()
         self.update_session_end_time()
