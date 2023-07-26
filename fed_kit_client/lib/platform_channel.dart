@@ -12,8 +12,12 @@ class PlatformChannel {
   Future<int?> connect(int partitionId, Uri host, Uri backendUrl) async {
     return await methodChannel.invokeMethod<int>('connect', {
       'partitionId': partitionId,
-      'host': host.toString(),
+      'host': host.host,
       'backendUrl': backendUrl.toString()
     });
+  }
+
+  Future<void> train() async {
+    await methodChannel.invokeMethod('train');
   }
 }

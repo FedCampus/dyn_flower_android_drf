@@ -1,7 +1,10 @@
 package org.eu.fedcampus.fed_kit_client
 
+import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
+import io.flutter.plugin.common.EventChannel.EventSink
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.Result
@@ -20,12 +23,27 @@ class MainActivity : FlutterActivity() {
     val scope = MainScope()
     lateinit var train: Train<Float3DArray, FloatArray>
     lateinit var flowerClient: FlowerClient<Float3DArray, FloatArray>
+    var events: EventSink? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger, "fed_kit_flutter"
-        ).setMethodCallHandler(::handle)
+        val messager = flutterEngine.dartExecutor.binaryMessenger
+        MethodChannel(messager, "fed_kit_flutter").setMethodCallHandler(::handle)
+        EventChannel(messager, "fed_kit_flutter_events").setStreamHandler(object :
+            EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, eventSink: EventSink?) {
+                if (eventSink === null) {
+                    Log.e(TAG, "onListen: eventSink is null.")
+                } else {
+                    events = eventSink
+                    Log.d(TAG, "onListen: initialized events.")
+                }
+            }
+
+            override fun onCancel(arguments: Any?) {
+                events = null
+            }
+        })
     }
 
     fun handle(call: MethodCall, result: Result) = scope.launch {
@@ -38,6 +56,7 @@ class MainActivity : FlutterActivity() {
                 connect(partitionId, host, backendUrl, result)
             }
 
+            "train" -> train()
             else -> result.notImplemented()
         }
     }
@@ -61,6 +80,12 @@ class MainActivity : FlutterActivity() {
             return result.error(TAG, "Failed to load data", err.stackTraceToString())
         }
         result.success(serverData.port)
+    }
+
+    fun train() = train.start {
+        runOnUiThread {
+            events?.success(it)
+        }
     }
 
     companion object {

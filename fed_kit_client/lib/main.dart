@@ -46,6 +46,12 @@ class _MyAppState extends State<MyApp> {
       _platformVersion = platformVersion;
       appendLog('Running on: $_platformVersion.');
     });
+
+    const EventChannel('fed_kit_flutter_events')
+        .receiveBroadcastStream()
+        .listen((event) {
+      appendLog('$event');
+    });
   }
 
   late int partitionId;
@@ -101,6 +107,16 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  train() async {
+    try {
+      await _channel.train();
+    } catch (error, stacktrace) {
+      appendLog('Failed to start training: $error.');
+      return logger.e(stacktrace);
+    }
+    appendLog('Started training.');
+  }
+
   @override
   Widget build(BuildContext context) {
     final children = [
@@ -134,9 +150,7 @@ class _MyAppState extends State<MyApp> {
           child: const Text('Connect'),
         ),
         ElevatedButton(
-          onPressed: () {
-            appendLog('Training started.');
-          },
+          onPressed: train,
           child: const Text('Train'),
         ),
       ]),
