@@ -11,6 +11,7 @@ import org.eu.fedcampus.train.FlowerClient
 import org.eu.fedcampus.train.Train
 import org.eu.fedcampus.train.examples.cifar10.DATA_TYPE
 import org.eu.fedcampus.train.examples.cifar10.Float3DArray
+import org.eu.fedcampus.train.examples.cifar10.loadData
 import org.eu.fedcampus.train.examples.cifar10.sampleSpec
 import org.eu.fedcampus.train.helpers.deviceId
 import org.eu.fedcampus.train.helpers.loadMappedFile
@@ -31,16 +32,17 @@ class MainActivity : FlutterActivity() {
         when (call.method) {
             "getPlatformVersion" -> result.success("Android ${android.os.Build.VERSION.RELEASE}")
             "connect" -> {
+                val partitionId = call.argument<Int>("partitionId")!!
                 val host = call.argument<String>("host")!!
                 val backendUrl = call.argument<String>("backendUrl")!!
-                connect(host, backendUrl, result)
+                connect(partitionId, host, backendUrl, result)
             }
 
             else -> result.notImplemented()
         }
     }
 
-    suspend fun connect(host: String, backendUrl: String, result: Result) {
+    suspend fun connect(partitionId: Int, host: String, backendUrl: String, result: Result) {
         train = Train(this, backendUrl, sampleSpec())
         train.enableTelemetry(deviceId(this))
         val modelFile = train.prepareModel(DATA_TYPE)
@@ -53,6 +55,11 @@ class MainActivity : FlutterActivity() {
         }
         flowerClient =
             train.prepare(loadMappedFile(modelFile), "dns:///$host:${serverData.port}", false)
+        try {
+            loadData(this, flowerClient, partitionId)
+        } catch (err: Throwable) {
+            return result.error(TAG, "Failed to load data", err.stackTraceToString())
+        }
         result.success(serverData.port)
     }
 

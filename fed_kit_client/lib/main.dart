@@ -48,7 +48,7 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  late int clientPartitionId;
+  late int partitionId;
   late Uri host;
   late int backendPort;
 
@@ -67,7 +67,7 @@ class _MyAppState extends State<MyApp> {
 
   connect() async {
     try {
-      clientPartitionId = int.parse(clientPartitionIdController.text);
+      partitionId = int.parse(clientPartitionIdController.text);
     } catch (e) {
       return appendLog('Invalid client partition id!');
     }
@@ -87,12 +87,16 @@ class _MyAppState extends State<MyApp> {
       return appendLog('Invalid backend server port!');
     }
     appendLog(
-        'Connecting with Partition ID: $clientPartitionId, Server IP: $host, Port: $backendPort');
+        'Connecting with Partition ID: $partitionId, Server IP: $host, Port: $backendPort');
     try {
-      final serverPort = await _channel.connect(host, backendUrl);
-      appendLog('Connected to Flower server on port $serverPort.');
+      final serverPort = await _channel.connect(partitionId, host, backendUrl);
+      appendLog(
+          'Connected to Flower server on port $serverPort and loaded data set.');
+    } on PlatformException catch (error, stacktrace) {
+      appendLog('Request failed: ${error.message}.');
+      logger.e('$error\n$stacktrace.');
     } catch (error, stacktrace) {
-      appendLog('Request failed: $error');
+      appendLog('Request failed: $error.');
       logger.e(stacktrace);
     }
   }
