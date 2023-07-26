@@ -1,10 +1,11 @@
 on:
   push:
     paths:
-      - '*.java'
-      - '*.kt'
-      - '*/xml'
-      - '*.gradle'
+      - '.github/workflows/intellij-formatting.yml'
+      - '**.java'
+      - '**.kt'
+      - '**.xml'
+      - '**.gradle'
 jobs:
   intelliJ:
     runs-on: ubuntu-latest
