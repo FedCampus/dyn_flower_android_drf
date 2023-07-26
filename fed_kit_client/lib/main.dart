@@ -1,11 +1,9 @@
+import 'package:fed_kit_client/platform_channel.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:http/http.dart' as http;
 
 import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
-
-import 'fed_kit_flutter.dart';
 
 final logger = Logger();
 
@@ -22,7 +20,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
-  final _fedKitFlutterPlugin = FedKitFlutter();
+  final _channel = PlatformChannel();
 
   @override
   void initState() {
@@ -33,8 +31,8 @@ class _MyAppState extends State<MyApp> {
   Future<void> initPlatformState() async {
     String platformVersion;
     try {
-      platformVersion = await _fedKitFlutterPlugin.getPlatformVersion() ??
-          'Unknown platform version';
+      platformVersion =
+          await _channel.getPlatformVersion() ?? 'Unknown platform version';
     } on PlatformException {
       platformVersion = 'Failed to get platform version.';
     }
@@ -51,8 +49,8 @@ class _MyAppState extends State<MyApp> {
   }
 
   late int clientPartitionId;
-  late Uri flServerIP;
-  late int flServerPort;
+  late Uri host;
+  late int backendPort;
 
   final logs = [const Text('Welcome to Flower!')];
   final clientPartitionIdController = TextEditingController();
@@ -67,37 +65,34 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  handleInput() async {
+  connect() async {
     try {
       clientPartitionId = int.parse(clientPartitionIdController.text);
     } catch (e) {
       return appendLog('Invalid client partition id!');
     }
     try {
-      flServerIP = Uri.parse(flServerIPController.text);
-      if (!flServerIP.isScheme('http')) {
+      host = Uri.parse('http://${flServerIPController.text}');
+      if (!host.hasEmptyPath || host.host.isEmpty || host.hasPort) {
         throw Exception();
       }
     } catch (e) {
-      return appendLog('Invalid Flower server IP!');
+      return appendLog('Invalid backend server host!');
     }
+    Uri backendUrl;
     try {
-      flServerPort = int.parse(flServerPortController.text);
+      backendPort = int.parse(flServerPortController.text);
+      backendUrl = host.replace(port: backendPort);
     } catch (e) {
-      return appendLog('Invalid Flower server port!');
+      return appendLog('Invalid backend server port!');
     }
     appendLog(
-        'Connecting with Partition ID: $clientPartitionId, Server IP: $flServerIP, Port: $flServerPort');
-    final flServerUrl =
-        flServerIP.replace(port: flServerPort, path: '/train/advertised');
+        'Connecting with Partition ID: $clientPartitionId, Server IP: $host, Port: $backendPort');
     try {
-      final response =
-          await http.post(flServerUrl, body: {'data_type': 'CIFAR10_32x32x3'});
-      appendLog('Sending to $flServerUrl.');
-      appendLog(
-          "Response status: ${response.statusCode}, body: ${response.body}");
+      final serverPort = await _channel.connect(host, backendUrl);
+      appendLog('Connected to Flower server on port $serverPort.');
     } catch (error, stacktrace) {
-      appendLog('Request to $flServerUrl failed: $error');
+      appendLog('Request failed: $error');
       logger.e(stacktrace);
     }
   }
@@ -116,22 +111,22 @@ class _MyAppState extends State<MyApp> {
       TextFormField(
         controller: flServerIPController,
         decoration: const InputDecoration(
-          labelText: 'FL Server IP',
+          labelText: 'Backend Server Host',
           filled: true,
         ),
-        keyboardType: TextInputType.url,
+        keyboardType: TextInputType.text,
       ),
       TextFormField(
         controller: flServerPortController,
         decoration: const InputDecoration(
-          labelText: 'FL Server Port',
+          labelText: 'Backend Server Port',
           filled: true,
         ),
         keyboardType: TextInputType.number,
       ),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         ElevatedButton(
-          onPressed: handleInput,
+          onPressed: connect,
           child: const Text('Connect'),
         ),
         ElevatedButton(

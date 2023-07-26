@@ -2,6 +2,7 @@
 
     <application
             android:label="fed_kit_client"
+            android:usesCleartextTraffic="true"
             android:name="${applicationName}">
         <activity
                 android:name=".MainActivity"
