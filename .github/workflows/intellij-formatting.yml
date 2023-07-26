@@ -1,4 +1,10 @@
-on: push
+on:
+  push:
+    paths:
+      - '*.java'
+      - '*.kt'
+      - '*/xml'
+      - '*.gradle'
 jobs:
   intelliJ:
     runs-on: ubuntu-latest
@@ -13,4 +19,4 @@ jobs:
           github_token: ${{ secrets.github_token }}
           fail_on_changes: true
           path: '.'
-          file_mask: '*.java,*.kt,*.xml,*.gradle,*.'
+          file_mask: '*.java,*.kt,*.xml,*.gradle'
