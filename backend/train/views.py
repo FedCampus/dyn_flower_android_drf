@@ -8,7 +8,8 @@ from rest_framework.request import MultiValueDict
 from rest_framework.response import Response
 from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 from rest_framework.views import Request
-from train.models import TFLiteModel, TrainingDataType
+from train import scheduler
+from train.models import *
 from train.scheduler import server
 from train.serializers import *
 
@@ -108,4 +109,21 @@ def upload_file(request: Request):
     )
     model.save()
 
+    return Response("ok")
+
+
+@api_view(["POST"])
+@permission_classes((permissions.AllowAny,))
+def store_params(request: Request):
+    server = scheduler.task
+    if server is None:
+        logger.error("No server running but got params to store.")
+        return Response("No server running.", HTTP_400_BAD_REQUEST)
+    file = file_in_request(request)
+    if file is None:
+        return Response("No file in request.", HTTP_400_BAD_REQUEST)
+    params = file.file.read()
+    to_save = ModelParams(params=params, tflite_model=server.model)
+    to_save.save()
+    server.update_session_end_time()
     return Response("ok")

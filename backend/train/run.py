@@ -1,7 +1,9 @@
 """`fig_config` and code in `server` are copied from Flower Android example."""
+import pickle
 from logging import getLogger
 from multiprocessing.connection import Connection
 
+import requests
 from flwr.common import FitRes, Parameters, Scalar
 from flwr.server import ServerConfig, start_server
 from flwr.server.client_proxy import ClientProxy
@@ -41,10 +43,10 @@ class FedAvgAndroidSave(FedAvgAndroid):
         return self.ndarrays_to_parameters(aggregated), {}
 
     def signal_save_params(self, params: list[NDArray]):
-        if self.db_conn is None:
-            # Skip if no connection to DB is provided.
-            return
-        self.db_conn.send(("save_params", params))
+        # TODO: Port resolution.
+        url = "http://localhost:8000/train/params"
+        files = {"file": pickle.dumps(params)}
+        return requests.post(url, files=files)
 
 
 def fit_config(server_round: int):
