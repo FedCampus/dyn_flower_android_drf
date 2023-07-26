@@ -1,0 +1,21 @@
+on:
+  push:
+    paths:
+      - '.github/workflows/dart.yml'
+      - '**.dart'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dart-lang/setup-dart@v1
+      - name: Install dependencies
+        run: |
+          cd fed_kit_client/
+          flutter pub get
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+      - name: Analyze project source
+        run: dart analyze
+      - name: Run tests
+        run: flutter test
