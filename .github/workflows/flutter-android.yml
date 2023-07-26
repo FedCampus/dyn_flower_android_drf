@@ -13,9 +13,9 @@ jobs:
         id: cache-flutter-android
         uses: actions/cache@v3
         with:
-          path:
-            - '~/.pub-cache/'
-            - 'fed_kit_client/'
+          path: |
+            ~/.pub-cache/
+            fed_kit_client/
           key: ${{ runner.os }}-flutter-android
       - name: Install dependencies
         run: |
