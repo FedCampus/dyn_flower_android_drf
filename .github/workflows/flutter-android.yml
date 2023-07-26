@@ -15,7 +15,7 @@ jobs:
         with:
           path: |
             ~/.pub-cache/
-            fed_kit_client/
+            fed_kit_client/build/
           key: ${{ runner.os }}-flutter-android
       - name: Install dependencies
         run: |
