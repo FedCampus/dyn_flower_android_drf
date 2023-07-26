@@ -1,6 +1,8 @@
 on:
   push:
-    paths: '**.py'
+    paths:
+      - '.github/workflows/black.yml'
+      - '**.py'
 jobs:
   Black:
     name: Check Black format
