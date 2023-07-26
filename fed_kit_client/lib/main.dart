@@ -21,6 +21,8 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
   final _channel = PlatformChannel();
+  var canConnect = true;
+  var canTrain = false;
 
   @override
   void initState() {
@@ -92,11 +94,15 @@ class _MyAppState extends State<MyApp> {
     } catch (e) {
       return appendLog('Invalid backend server port!');
     }
+
+    canConnect = false;
     appendLog(
         'Connecting with Partition ID: $partitionId, Server IP: $host, Port: $backendPort');
+
     try {
       final serverPort = await _channel.connect(partitionId, host, backendUrl);
-      appendLog(
+      canTrain = true;
+      return appendLog(
           'Connected to Flower server on port $serverPort and loaded data set.');
     } on PlatformException catch (error, stacktrace) {
       appendLog('Request failed: ${error.message}.');
@@ -105,16 +111,29 @@ class _MyAppState extends State<MyApp> {
       appendLog('Request failed: $error.');
       logger.e(stacktrace);
     }
+
+    setState(() {
+      canConnect = true;
+    });
   }
 
   train() async {
+    setState(() {
+      canTrain = false;
+    });
     try {
       await _channel.train();
+      return appendLog('Started training.');
+    } on PlatformException catch (error, stacktrace) {
+      appendLog('Training failed: ${error.message}.');
+      logger.e('$error\n$stacktrace.');
     } catch (error, stacktrace) {
       appendLog('Failed to start training: $error.');
-      return logger.e(stacktrace);
+      logger.e(stacktrace);
     }
-    appendLog('Started training.');
+    setState(() {
+      canTrain = true;
+    });
   }
 
   @override
@@ -146,11 +165,11 @@ class _MyAppState extends State<MyApp> {
       ),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         ElevatedButton(
-          onPressed: connect,
+          onPressed: canConnect ? connect : null,
           child: const Text('Connect'),
         ),
         ElevatedButton(
-          onPressed: train,
+          onPressed: canTrain ? train : null,
           child: const Text('Train'),
         ),
       ]),

@@ -47,17 +47,21 @@ class MainActivity : FlutterActivity() {
     }
 
     fun handle(call: MethodCall, result: Result) = scope.launch {
-        when (call.method) {
-            "getPlatformVersion" -> result.success("Android ${android.os.Build.VERSION.RELEASE}")
-            "connect" -> {
-                val partitionId = call.argument<Int>("partitionId")!!
-                val host = call.argument<String>("host")!!
-                val backendUrl = call.argument<String>("backendUrl")!!
-                connect(partitionId, host, backendUrl, result)
-            }
+        try {
+            when (call.method) {
+                "getPlatformVersion" -> result.success("Android ${android.os.Build.VERSION.RELEASE}")
+                "connect" -> {
+                    val partitionId = call.argument<Int>("partitionId")!!
+                    val host = call.argument<String>("host")!!
+                    val backendUrl = call.argument<String>("backendUrl")!!
+                    connect(partitionId, host, backendUrl, result)
+                }
 
-            "train" -> train()
-            else -> result.notImplemented()
+                "train" -> train(result)
+                else -> result.notImplemented()
+            }
+        } catch (err: Throwable) {
+            result.error(TAG, "$err", err.stackTraceToString())
         }
     }
 
@@ -82,10 +86,13 @@ class MainActivity : FlutterActivity() {
         result.success(serverData.port)
     }
 
-    fun train() = train.start {
-        runOnUiThread {
-            events?.success(it)
+    fun train(result: Result) {
+        train.start {
+            runOnUiThread {
+                events?.success(it)
+            }
         }
+        result.success(null)
     }
 
     companion object {
