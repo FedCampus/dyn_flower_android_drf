@@ -5,36 +5,77 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='TrainingDataType',
+            name="TrainingDataType",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(editable=False, max_length=256, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(editable=False, max_length=256, unique=True)),
             ],
         ),
         migrations.CreateModel(
-            name='TFLiteModel',
+            name="TFLiteModel",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(editable=False, max_length=64, unique=True)),
-                ('file_path', models.CharField(editable=False, max_length=64, unique=True)),
-                ('layers_sizes', models.JSONField(editable=False)),
-                ('data_type', models.ForeignKey(editable=False, on_delete=django.db.models.deletion.CASCADE, related_name='tflite_models', to='train.trainingdatatype')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(editable=False, max_length=64, unique=True)),
+                (
+                    "file_path",
+                    models.CharField(editable=False, max_length=64, unique=True),
+                ),
+                ("layers_sizes", models.JSONField(editable=False)),
+                (
+                    "data_type",
+                    models.ForeignKey(
+                        editable=False,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="tflite_models",
+                        to="train.trainingdatatype",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='ModelParams',
+            name="ModelParams",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('params', models.BinaryField()),
-                ('tflite_model', models.ForeignKey(editable=False, on_delete=django.db.models.deletion.CASCADE, related_name='params', to='train.tflitemodel')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("params", models.BinaryField()),
+                (
+                    "tflite_model",
+                    models.ForeignKey(
+                        editable=False,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="params",
+                        to="train.tflitemodel",
+                    ),
+                ),
             ],
         ),
     ]
