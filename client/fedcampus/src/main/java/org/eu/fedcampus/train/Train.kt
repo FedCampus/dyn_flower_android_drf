@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import io.grpc.ManagedChannel
 import kotlinx.coroutines.*
-import org.eu.fedcampus.train.db.ModelDao
 import org.eu.fedcampus.train.db.TFLiteModel
 import retrofit2.http.*
 import java.io.File
@@ -15,7 +14,6 @@ class Train<X : Any, Y : Any> constructor(
     val context: Context,
     backendUrl: String,
     val sampleSpec: SampleSpec<X, Y>,
-    val modelDao: ModelDao? = null
 ) {
     var sessionId: Int? = null
     var telemetry = false
@@ -52,9 +50,11 @@ class Train<X : Any, Y : Any> constructor(
         return model
     }
 
+    @Suppress("UNUSED_PARAMETER")
     @Throws
-    suspend fun modelDownloaded(model: TFLiteModel): Boolean {
-        return modelDao?.findById(model.id)?.equals(model.toDbModel()) ?: false
+    fun modelDownloaded(model: TFLiteModel): Boolean {
+        // TODO: Save model to DB.
+        return false
     }
 
     /**
@@ -78,7 +78,6 @@ class Train<X : Any, Y : Any> constructor(
         }
         val fileDir = client.downloadFile(fileUrl, modelDir, fileName)
         Log.i(downloadModelFileTag, "$fileUrl -> ${fileDir.absolutePath}")
-        modelDao?.upsertAll(model.toDbModel())
         return fileDir
     }
 

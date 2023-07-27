@@ -19,7 +19,6 @@ import kotlinx.coroutines.withContext
 import org.eu.fedcampus.train.FlowerClient
 import org.eu.fedcampus.train.SampleSpec
 import org.eu.fedcampus.train.Train
-import org.eu.fedcampus.train.db.ModelDao
 import org.eu.fedcampus.train.helpers.loadMappedFile
 import java.util.concurrent.TimeUnit
 
@@ -35,7 +34,6 @@ open class BaseTrainWorker<X : Any, Y : Any>(
     val dataType: String,
     val loadData: suspend (Context, FlowerClient<X, Y>, Int) -> Unit,
     val trainCallback: (String) -> Unit,
-    val modelDao: ModelDao? = null,
     val useTLS: Boolean = false,
 ) : CoroutineWorker(context, params) {
     val data = inputData
@@ -55,7 +53,7 @@ open class BaseTrainWorker<X : Any, Y : Any>(
         val flowerHost = data.getString("flowerHost")!!
         val participantId = data.getInt("participantId", 1)
 
-        train = Train(context, backendUrl, sampleSpec, modelDao)
+        train = Train(context, backendUrl, sampleSpec)
         if (deviceId != 0L) train.enableTelemetry(deviceId)
         Log.i(TAG, "Starting with backend $backendUrl for $dataType.")
 

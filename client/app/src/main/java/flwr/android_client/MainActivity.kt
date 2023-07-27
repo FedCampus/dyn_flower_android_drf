@@ -5,7 +5,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import androidx.room.Room
 import flwr.android_client.databinding.ActivityMainBinding
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -26,11 +25,9 @@ class MainActivity : AppCompatActivity() {
     lateinit var flowerClient: FlowerClient<Float3DArray, FloatArray>
     private lateinit var binding: ActivityMainBinding
     val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-    lateinit var db: Db
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        db = Room.databaseBuilder(this, Db::class.java, "model-db").build()
         setContentView(R.layout.activity_main)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
