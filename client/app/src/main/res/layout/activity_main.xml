@@ -4,7 +4,7 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         tools:ignore="Autofill,ButtonStyle"
-        tools:context=".MainActivity">
+        tools:context="org.eu.fedcampus.android_client.MainActivity">
 
     <EditText
             android:id="@+id/clientPartitionIdEditText"

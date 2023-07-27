@@ -1,13 +1,13 @@
-package flwr.android_client
+package org.eu.fedcampus.android_client
 
 import android.icu.text.SimpleDateFormat
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import flwr.android_client.databinding.ActivityMainBinding
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import org.eu.fedcampus.android_client.databinding.ActivityMainBinding
 import org.eu.fedcampus.train.FlowerClient
 import org.eu.fedcampus.train.Train
 import org.eu.fedcampus.train.examples.cifar10.DATA_TYPE

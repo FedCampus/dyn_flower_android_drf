@@ -7,7 +7,7 @@ android {
     compileSdkVersion 33
 
     defaultConfig {
-        applicationId "flwr.android_client"
+        applicationId "org.eu.fedcampus.android_client"
         // API level 14+ is required for TLS since Google Play Services v10.2
         minSdkVersion 24
         targetSdkVersion 33
@@ -35,7 +35,7 @@ android {
     }
 
 
-    namespace 'flwr.android_client'
+    namespace 'org.eu.fedcampus.android_client'
     lint {
         disable 'GoogleAppIndexingWarning', 'HardcodedText', 'InvalidPackage'
         textOutput file('stdout')
