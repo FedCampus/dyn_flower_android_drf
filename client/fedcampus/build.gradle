@@ -58,7 +58,7 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.10.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
-    implementation 'androidx.work:work-runtime-ktx:2.7.1'
+    implementation 'androidx.work:work-runtime-ktx:2.8.1'
 
     // HTTP requests.
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
@@ -79,10 +79,10 @@ dependencies {
     testImplementation("androidx.room:room-testing:$room_version")
 
     // TensorFlow Lite.
-    implementation 'org.tensorflow:tensorflow-lite:2.12.0'
-    implementation 'org.tensorflow:tensorflow-lite-gpu:2.12.0'
-    implementation 'org.tensorflow:tensorflow-lite-support:0.4.3'
-    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.12.0'
+    implementation 'org.tensorflow:tensorflow-lite:2.13.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu:2.13.0'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
+    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.13.0'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
