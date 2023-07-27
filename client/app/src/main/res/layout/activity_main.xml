@@ -55,18 +55,20 @@
 
     </LinearLayout>
 
-    <TextView
-            android:id="@+id/logsTextView"
+
+    <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_height="match_parent"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="32dp"
             android:layout_marginLeft="12dp"
-            android:layout_marginRight="12dp"
-            android:scrollbars="vertical"
-            android:textColor="@android:color/black"
-            android:background="@android:color/white"
-            android:text="Logs will be shown here." />
+            android:layout_marginRight="12dp">
+
+        <TextView
+                android:id="@+id/logsTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Logs will be shown here." />
+    </ScrollView>
 
 </LinearLayout>
