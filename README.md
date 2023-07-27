@@ -1,5 +1,9 @@
 # FedKit
 
+Federated Learning (FL) and Federated Analytics (FA) development kit for FedCampus.
+
+This repository contains the libraries used to implement the FL and FA functionalities of the FedCampus app.
+
 ## Architecture
 
 ### Backend

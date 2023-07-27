@@ -8,7 +8,7 @@ Download the training and testing data from <https://www.dropbox.com/s/coeixr4kh
 
 Set up and start the backend server according to `Set up` and `Development` sections in `../backend/README.md`.
 
-Install the app on *physical* Android devices and launch it.
+Install `app` on *physical* Android devices and launch it.
 
 *Note*: the highest tested JDK version the app supports is 16; it fails to build using JDK 19 on macOS.
 
@@ -24,3 +24,7 @@ Push the second button and connect to the backend server. This should take littl
 Push the first button and load the dataset. This may take a minute.
 
 Push the last button and start the training.
+
+## Note on other code
+
+This directory also contains the Android library code used to implement `app` and a benchmark app.
