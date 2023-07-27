@@ -1,20 +1,12 @@
 package flwr.android_client
 
 import android.icu.text.SimpleDateFormat
+import android.net.Uri
 import android.os.Bundle
-import android.text.TextUtils
-import android.text.method.ScrollingMovementMethod
 import android.util.Log
-import android.util.Patterns
-import android.view.View
-import android.view.inputmethod.InputMethodManager
-import android.widget.Button
-import android.widget.CheckBox
-import android.widget.EditText
-import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.room.Room
+import flwr.android_client.databinding.ActivityMainBinding
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.eu.fedcampus.train.FlowerClient
@@ -25,185 +17,128 @@ import org.eu.fedcampus.train.examples.cifar10.loadData
 import org.eu.fedcampus.train.examples.cifar10.sampleSpec
 import org.eu.fedcampus.train.helpers.deviceId
 import org.eu.fedcampus.train.helpers.loadMappedFile
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
-@Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
     private val scope = MainScope()
     lateinit var train: Train<Float3DArray, FloatArray>
     lateinit var flowerClient: FlowerClient<Float3DArray, FloatArray>
-    private lateinit var ip: EditText
-    private lateinit var port: EditText
-    private lateinit var loadDataButton: Button
-    private lateinit var connectButton: Button
-    private lateinit var trainButton: Button
-    private lateinit var resultText: TextView
-    private lateinit var freshStartCheckbox: CheckBox
-    private lateinit var device_id: EditText
+    private lateinit var binding: ActivityMainBinding
+    val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     lateinit var db: Db
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         db = Room.databaseBuilder(this, Db::class.java, "model-db").build()
         setContentView(R.layout.activity_main)
-        resultText = findViewById(R.id.grpc_response_text)
-        resultText.movementMethod = ScrollingMovementMethod()
-        device_id = findViewById(R.id.device_id_edit_text)
-        ip = findViewById(R.id.serverIP)
-        port = findViewById(R.id.serverPort)
-        loadDataButton = findViewById(R.id.load_data)
-        connectButton = findViewById(R.id.connect)
-        trainButton = findViewById(R.id.trainFederated)
-        freshStartCheckbox = findViewById(R.id.fresh_start_checkbox)
-        scope.launch { restoreInput() }
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        binding.connectButton.setOnClickListener { connect() }
+        binding.trainButton.setOnClickListener { startTrain() }
     }
 
-    suspend fun restoreInput() {
-        val input = db.inputDao().get() ?: return
-        runOnUiThread {
-            device_id.text.append(input.device_id)
-            ip.text.append(input.ip)
-            port.text.append(input.port)
-        }
-    }
-
-    fun setResultText(text: String) {
-        val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.GERMANY)
+    fun appendLog(text: String) {
         val time = dateFormat.format(Date())
-        resultText.append("\n$time   $text")
-    }
-
-    suspend fun runWithStacktrace(call: suspend () -> Unit) {
-        try {
-            call()
-        } catch (err: Error) {
-            Log.e(TAG, Log.getStackTraceString(err))
-        }
-    }
-
-    suspend fun <T> runWithStacktraceOr(or: T, call: suspend () -> T): T {
-        return try {
-            call()
-        } catch (err: Error) {
-            Log.e(TAG, Log.getStackTraceString(err))
-            or
-        }
-    }
-
-    fun loadData(@Suppress("UNUSED_PARAMETER") view: View) {
-        if (device_id.text.isEmpty() || !(1..10).contains(device_id.text.toString().toInt())) {
-            Toast.makeText(
-                this,
-                "Please enter a client partition ID between 1 and 10 (inclusive)",
-                Toast.LENGTH_LONG
-            ).show()
-        } else {
-            hideKeyboard()
-            setResultText("Loading the local training dataset in memory. It will take several seconds.")
-            device_id.isEnabled = false
-            loadDataButton.isEnabled = false
-            scope.launch {
-                loadDataInBackground()
-            }
-            scope.launch {
-                db.inputDao().upsertAll(
-                    Input(
-                        1,
-                        device_id.text.toString(),
-                        ip.text.toString(),
-                        port.text.toString()
-                    )
-                )
-            }
-        }
-    }
-
-    suspend fun loadDataInBackground() {
-        val result = runWithStacktraceOr("Failed to load training dataset.") {
-            loadData(this, flowerClient, device_id.text.toString().toInt())
-            "Training dataset is loaded in memory. Ready to train!"
-        }
         runOnUiThread {
-            setResultText(result)
-            trainButton.isEnabled = true
+            binding.logsTextView.append("\n$time   $text")
         }
     }
 
-    fun connect(@Suppress("UNUSED_PARAMETER") view: View) {
-        val host = ip.text.toString()
-        val portStr = port.text.toString()
-        if (TextUtils.isEmpty(host) || TextUtils.isEmpty(portStr) || !Patterns.IP_ADDRESS.matcher(
-                host
-            ).matches()
-        ) {
-            Toast.makeText(
-                this,
-                "Please enter the correct IP and port of the FL server",
-                Toast.LENGTH_LONG
-            ).show()
-        } else {
-            val port = if (TextUtils.isEmpty(portStr)) 0 else portStr.toInt()
-            scope.launch {
-                runWithStacktrace {
-                    connectInBackground(host, port)
-                }
+    fun connect() {
+        val clientPartitionIdText = binding.clientPartitionIdEditText.text.toString()
+        val flServerIpText = binding.flServerIpEditText.text.toString()
+        val flServerPortText = binding.flServerPortEditText.text.toString()
+
+        // Validate client partition id
+        val partitionId: Int
+        try {
+            partitionId = clientPartitionIdText.toInt()
+        } catch (e: NumberFormatException) {
+            appendLog("Invalid client partition id!")
+            return
+        }
+
+        // Validate backend server host
+        val host: Uri
+        try {
+            host = Uri.parse("http://$flServerIpText")
+            if (!host.path.isNullOrEmpty() || host.host.isNullOrEmpty()) {
+                throw Exception()
             }
-            hideKeyboard()
-            ip.isEnabled = false
-            this.port.isEnabled = false
-            connectButton.isEnabled = false
-            setResultText("Creating channel object.")
+        } catch (e: Exception) {
+            appendLog("Invalid backend server host!")
+            return
+        }
+
+        // Validate backend server port
+        val backendPort: Int
+        val backendUrl: Uri
+        try {
+            backendPort = flServerPortText.toInt()
+            backendUrl = Uri.parse("http://$flServerIpText:$backendPort")
+
+        } catch (e: NumberFormatException) {
+            appendLog("Invalid backend server port!")
+            return
+        }
+
+        appendLog("Connecting with Partition ID: $partitionId, Server IP: $host, Port: $backendPort")
+
+        scope.launch {
+            try {
+                connectInBackground(partitionId, backendUrl, host)
+            } catch (err: Throwable) {
+                appendLog("$err")
+                Log.e(TAG, err.stackTraceToString())
+                runOnUiThread { binding.connectButton.isEnabled = true }
+            }
+        }
+        binding.connectButton.isEnabled = false
+        appendLog("Creating channel object.")
+    }
+
+    fun startTrain() {
+        scope.launch {
+            try {
+                trainInBackground()
+            } catch (err: Throwable) {
+                appendLog("$err")
+                Log.e(TAG, err.stackTraceToString())
+                binding.trainButton.isEnabled = true
+            }
         }
     }
 
     @Throws
-    suspend fun connectInBackground(host: String, port: Int) {
-        val backendUrl = "http://$host:$port"
+    suspend fun connectInBackground(participationId: Int, backendUrl: Uri, host: Uri) {
         Log.i(TAG, "Backend URL: $backendUrl")
-        train = Train(this, backendUrl, sampleSpec(), db.modelDao())
+        train = Train(this, backendUrl.toString(), sampleSpec())
         train.enableTelemetry(deviceId(this))
         val modelFile = train.prepareModel(DATA_TYPE)
-        val serverData = train.getServerInfo(freshStartCheckbox.isChecked)
-        freshStartCheckbox.isEnabled = false
+        val serverData = train.getServerInfo(binding.startFreshCheckBox.isChecked)
         if (serverData.port == null) {
             throw Error("Flower server port not available, status ${serverData.status}")
         }
-        flowerClient =
-            train.prepare(loadMappedFile(modelFile), "dns:///$host:${serverData.port}", false)
+        flowerClient = train.prepare(
+            loadMappedFile(modelFile), "dns:///${host.host}:${serverData.port}", false
+        )
+        loadData(this, flowerClient, participationId)
+
+        appendLog("Connected to Flower server on port ${serverData.port} and loaded data set.")
         runOnUiThread {
-            loadDataButton.isEnabled = true
-            setResultText("Prepared for training.")
+            binding.trainButton.isEnabled = true
         }
     }
 
-    fun runGrpc(@Suppress("UNUSED_PARAMETER") view: View) {
-        scope.launch {
-            runGrpcInBackground()
+    fun trainInBackground() {
+        train.start {
+            runOnUiThread { appendLog(it) }
         }
-    }
-
-    suspend fun runGrpcInBackground() {
-        val result = runWithStacktraceOr("Failed to connect to the FL server \n") {
-            train.start {
-                runOnUiThread {
-                    setResultText(it)
-                }
-            }
-            "Connection to the FL server successful \n"
-        }
+        appendLog("Started training.")
         runOnUiThread {
-            setResultText(result)
-            trainButton.isEnabled = false
+            binding.trainButton.isEnabled = false
         }
-    }
-
-    fun hideKeyboard() {
-        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-        var view = currentFocus
-        if (view == null) {
-            view = View(this)
-        }
-        imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 }
 

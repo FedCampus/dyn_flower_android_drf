@@ -61,7 +61,7 @@ class _MyAppState extends State<MyApp> {
   late Uri host;
   late int backendPort;
 
-  final logs = [const Text('Welcome to Flower!')];
+  final logs = [const Text('Logs will be shown here.')];
   final clientPartitionIdController = TextEditingController();
   final flServerIPController = TextEditingController();
   final flServerPortController = TextEditingController();
