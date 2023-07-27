@@ -23,6 +23,7 @@ class _MyAppState extends State<MyApp> {
   final _channel = PlatformChannel();
   var canConnect = true;
   var canTrain = false;
+  var startFresh = false;
 
   @override
   void initState() {
@@ -100,7 +101,8 @@ class _MyAppState extends State<MyApp> {
         'Connecting with Partition ID: $partitionId, Server IP: $host, Port: $backendPort');
 
     try {
-      final serverPort = await _channel.connect(partitionId, host, backendUrl);
+      final serverPort = await _channel.connect(partitionId, host, backendUrl,
+          startFresh: startFresh);
       canTrain = true;
       return appendLog(
           'Connected to Flower server on port $serverPort and loaded data set.');
@@ -163,6 +165,16 @@ class _MyAppState extends State<MyApp> {
         ),
         keyboardType: TextInputType.number,
       ),
+      Row(
+        children: [
+          Checkbox(
+              value: startFresh,
+              onChanged: (checked) {
+                setState(() => startFresh = checked!);
+              }),
+          const Text('Start Fresh')
+        ],
+      ),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         ElevatedButton(
           onPressed: canConnect ? connect : null,
@@ -173,7 +185,6 @@ class _MyAppState extends State<MyApp> {
           child: const Text('Train'),
         ),
       ]),
-      const Text('Activity Log'),
       Expanded(
         child: ListView.builder(
           controller: scrollController,
@@ -183,7 +194,7 @@ class _MyAppState extends State<MyApp> {
           itemCount: logs.length,
           itemBuilder: (context, index) => logs[logs.length - index - 1],
         ),
-      )
+      ),
     ];
 
     return MaterialApp(

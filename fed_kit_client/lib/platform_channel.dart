@@ -9,11 +9,13 @@ class PlatformChannel {
     return await methodChannel.invokeMethod<String>('getPlatformVersion');
   }
 
-  Future<int?> connect(int partitionId, Uri host, Uri backendUrl) async {
+  Future<int?> connect(int partitionId, Uri host, Uri backendUrl,
+      {bool startFresh = false}) async {
     return await methodChannel.invokeMethod<int>('connect', {
       'partitionId': partitionId,
       'host': host.host,
-      'backendUrl': backendUrl.toString()
+      'backendUrl': backendUrl.toString(),
+      'startFresh': startFresh,
     });
   }
 

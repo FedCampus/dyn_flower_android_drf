@@ -54,7 +54,8 @@ class MainActivity : FlutterActivity() {
                     val partitionId = call.argument<Int>("partitionId")!!
                     val host = call.argument<String>("host")!!
                     val backendUrl = call.argument<String>("backendUrl")!!
-                    connect(partitionId, host, backendUrl, result)
+                    val startFresh = call.argument<Boolean>("startFresh")!!
+                    connect(partitionId, host, backendUrl, startFresh, result)
                 }
 
                 "train" -> train(result)
@@ -65,12 +66,17 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    suspend fun connect(partitionId: Int, host: String, backendUrl: String, result: Result) {
+    suspend fun connect(
+        partitionId: Int,
+        host: String,
+        backendUrl: String,
+        startFresh: Boolean,
+        result: Result
+    ) {
         train = Train(this, backendUrl, sampleSpec())
         train.enableTelemetry(deviceId(this))
         val modelFile = train.prepareModel(DATA_TYPE)
-        // TODO: freshStartCheckbox
-        val serverData = train.getServerInfo()
+        val serverData = train.getServerInfo(startFresh)
         if (serverData.port == null) {
             return result.error(
                 TAG, "Flower server port not available", "status ${serverData.status}"
