@@ -1,59 +1,54 @@
-# dyn_flower_android_drf
+# FedKit
 
-Dynamic Flower model use on Android by wrapping Flower with Django REST Framework
+## Architecture
 
-Please see `backend/README.md` for information on how to set up the backend server, see `client/README.md` to set up the client.
+### Backend
 
-Please see `gen_tflite/README.md` for information on how to create models and convert them to `.tflite` files.
+The backend server uses Django REST Framework to provide persistent service and on-demand, backend-configurable training.
 
-Alternatively, this repository can be used as a package to implement custom Flower clients. Please see `client/fedcampus/README.md` for more information.
+The FL training steps are supported using the [Flower][flower] FL framework. Flower servers use gRPC, and are spawned on-demand by the backend server.
 
----
+Located at `backend/`. Please see `backend/README.md` for information on how to set up the backend server.
 
-Note: don't follow the instructions below. They are left here for reference only.
+## Mobile clients
 
-Original README from Flower Android example:
+### Android client
 
-# Flower Android Example (TensorFlowLite)
+The Android client package and demo is located at `client/`.
 
-This example demonstrates a federated learning setup with Android Clients. The training on Android is done on a CIFAR10 dataset using TensorFlow Lite. The setup is as follows:
+To try out the Android client, please see `client/README.md`.
 
-- The CIFAR10 dataset is randomly split across 10 clients. Each Android client holds a local dataset of 5000 training examples and 1000 test examples.
-- The FL server runs in Python but all the clients run on Android.
-- We use a strategy called FedAvgAndroid for this example.
-- The strategy is vanilla FedAvg with a custom serialization and deserialization to handle the Bytebuffers sent from Android clients to Python server.
+To use the library in this repository to implement custom Android Flower clients, please see `client/fedcampus/README.md`.
 
-## Project Setup
+### iOS client
 
-Start by cloning the example project. We prepared a single-line command that you can copy into your shell which will checkout the example for you:
+- [ ] Training using Flower.
+- [ ] Communication with the Backend.
 
-```shell
-git clone --depth=1 https://github.com/adap/flower.git && mv flower/examples/android . && rm -rf flower && cd android
-```
+## ML model generation
 
-Project dependencies (such as `tensorflow` and `flwr`) are defined in `pyproject.toml`. We recommend [Poetry](https://python-poetry.org/docs/) to install those dependencies and manage your virtual environment ([Poetry installation](https://python-poetry.org/docs/#installation)), but feel free to use a different way of installing dependencies and managing virtual environments if you have other preferences.
+We support TensorFlow (Keras) models.
 
-```shell
-poetry install
-poetry shell
-```
+### ML model for Android
 
-Poetry will install all your dependencies in a newly created virtual environment. To verify that everything works correctly you can run the following command:
+The ML model generation script for Android is located at `gen_tflite/`. Please see `gen_tflite/README.md` for information on how to create models and convert them to `.tflite` files.
 
-```shell
-poetry run python3 -c "import flwr"
-```
+## Development
 
-If you don't see any errors you're good to go!
+### Development on Python code
 
-# Run Federated Learning on Android Devices
+- Use Python3.10 or above.
+- Install dependencies using `requirements.txt`s.
 
-The included `run.sh` will start the Flower server (using `server.py`). You can simply start it in a terminal as follows:
+## Contributing
 
-```shell
-poetry run ./run.sh
-```
+Please see [CONTRIBUTING.md for FedCampus][contributing].
 
-Download and install the `flwr_android_client.apk` on each Android device/emulator. The server currently expects a minimum of 4 Android clients, but it can be changed in the `server.py`.
+## History
 
-When the Android app runs, add the client ID (between 1-10), the IP and port of your server, and press `Load Dataset`. This will load the local CIFAR10 dataset in memory. Then press `Setup Connection Channel` which will establish connection with the server. Finally, press `Train Federated!` which will start the federated training.
+This repository is moved from [dyn_flower_android_drf][dyn_flower_android_drf] to [FedKit][fed_kit].
+
+[contributing]: https://github.com/FedCampus/meta/blob/main/CONTRIBUTING.md
+[dyn_flower_android_drf]: https://github.com/FedCampus/dyn_flower_android_drf
+[fed_kit]: https://github.com/FedCampus/FedKit
+[flower]: https://flower.dev/
