@@ -25,6 +25,13 @@ Push the first button and load the dataset. This may take a minute.
 
 Push the last button and start the training.
 
-## Note on other code
+## Credits
+
+`app` is developed based on [Flower Android Java example][flower_java]. The related portion of the code was licensed under [Flower's license][flower_license].
+
+## Note on other code in this directory
 
 This directory also contains the Android library code used to implement `app` and a benchmark app.
+
+[flower_java]: https://github.com/adap/flower/tree/main/examples/android
+[flower_license]: https://github.com/adap/flower/blob/main/LICENSE
