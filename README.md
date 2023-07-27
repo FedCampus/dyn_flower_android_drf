@@ -50,7 +50,7 @@ Please see [CONTRIBUTING.md for FedCampus][contributing].
 
 ## History
 
-This repository is moved from [dyn_flower_android_drf][dyn_flower_android_drf] to [FedKit][fed_kit].
+This repository is moved from [dyn_flower_android_drf][dyn_flower_android_drf] to [FedKit][fed_kit]. Please see the older Git history in the former repository.
 
 [contributing]: https://github.com/FedCampus/meta/blob/main/CONTRIBUTING.md
 [dyn_flower_android_drf]: https://github.com/FedCampus/dyn_flower_android_drf
