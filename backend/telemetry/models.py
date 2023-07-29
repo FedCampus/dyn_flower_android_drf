@@ -19,7 +19,7 @@ class TrainingSession(models.Model):
 # Always change together with Android `Train.FitInsTelemetryData`.
 class FitInsTelemetryData(models.Model):
     id: int  # Help static analysis.
-    device_id = models.IntegerField(**cfg)
+    device_id = models.BigIntegerField(**cfg)
     session_id = models.ForeignKey(
         TrainingSession, on_delete=models.CASCADE, related_name="fit_ins", **cfg
     )
@@ -33,7 +33,7 @@ class FitInsTelemetryData(models.Model):
 # Always change together with Android `Train.EvaluateInsTelemetryData`.
 class EvaluateInsTelemetryData(models.Model):
     id: int  # Help static analysis.
-    device_id = models.IntegerField(**cfg)
+    device_id = models.BigIntegerField(**cfg)
     session_id = models.ForeignKey(
         TrainingSession, on_delete=models.CASCADE, related_name="evaluate_ins", **cfg
     )
@@ -41,7 +41,7 @@ class EvaluateInsTelemetryData(models.Model):
     end = models.DateTimeField(**cfg)
     loss = models.FloatField(**cfg)
     accuracy = models.FloatField(**cfg)
-    test_size = models.IntegerField(**cfg)
+    test_size = models.BigIntegerField(**cfg)
 
     def __str__(self) -> str:
         return f"EvaluateIns {self.id} on {self.device_id} {self.start} - {self.end} loss: {self.loss} accuracy: {self.accuracy} test_size: {self.test_size}"
