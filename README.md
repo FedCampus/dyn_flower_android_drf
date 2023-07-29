@@ -1,3 +1,7 @@
+# NOTICE: moved to [FedKit][fed_kit]
+
+---
+
 # FedKit
 
 Federated Learning (FL) and Federated Analytics (FA) development kit for FedCampus.
