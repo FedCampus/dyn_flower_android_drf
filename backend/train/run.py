@@ -8,6 +8,7 @@ from flwr.server import ServerConfig, start_server
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy import FedAvgAndroid
 from flwr.server.strategy.aggregate import aggregate
+from numpy import isnan
 from numpy.typing import NDArray
 
 PORT = 8080
@@ -31,10 +32,19 @@ class FedAvgAndroidSave(FedAvgAndroid):
         if not self.accept_failures and failures:
             return None, {}
         # Convert results
-        weights_results = [
-            (self.parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples)
-            for client, fit_res in results
-        ]
+        weights_results = []
+        for client, fit_res in results:
+            weights = self.parameters_to_ndarrays(fit_res.parameters)
+            if any(isnan(weight).any() for weight in weights):
+                logger.error(
+                    f"aggregate_fit: disgarding weights with NaN from {client}: {weights}."
+                )
+            else:
+                weights_results.append((weights, fit_res.num_examples))
+        if weights_results.__len__() == 0:
+            raise RuntimeError(
+                "aggregate_fit: No valid weights so cannot continue training."
+            )
         aggregated = aggregate(weights_results)
         self.signal_save_params(aggregated)
         return self.ndarrays_to_parameters(aggregated), {}
@@ -82,3 +92,5 @@ def flwr_server(initial_parameters: Parameters | None):
         )
     except KeyboardInterrupt:
         return
+    except RuntimeError as err:
+        logger.error(err)
