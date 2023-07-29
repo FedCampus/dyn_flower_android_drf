@@ -45,7 +45,7 @@ class Train<X : Any, Y : Any> constructor(
 
     private suspend fun doAdvertisedModel(dataType: String): TFLiteModel {
         val model = client.advertisedModel(PostAdvertisedData(dataType))
-        Log.d("Model", "$model")
+        Log.d(TAG, "Model: $model")
         state = TrainState.WithModel(model)
         return model
     }
@@ -92,7 +92,7 @@ class Train<X : Any, Y : Any> constructor(
     private suspend fun doGetServerInfo(model: TFLiteModel, start_fresh: Boolean): ServerData {
         val serverData = client.postServer(model, start_fresh)
         sessionId = serverData.session_id
-        Log.i("Server data", "$serverData")
+        Log.i(TAG, "Server data: $serverData")
         return serverData
     }
 
@@ -185,7 +185,7 @@ class Train<X : Any, Y : Any> constructor(
         checkTelemetryEnabled()
         val body = FitInsTelemetryData(deviceId, sessionId!!, start, end)
         client.fitInsTelemetry(body)
-        Log.i("Telemetry", "Sent fit instruction telemetry")
+        Log.i(TAG, "Telemetry: Sent fit instruction telemetry")
     }
 
     @Throws
@@ -200,8 +200,11 @@ class Train<X : Any, Y : Any> constructor(
         val body =
             EvaluateInsTelemetryData(deviceId, sessionId!!, start, end, loss, accuracy, test_size)
         client.evaluateInsTelemetry(body)
-        Log.i("Telemetry", "Sent evaluate instruction telemetry")
+        Log.i(TAG, "Telemetry: Sent evaluate instruction telemetry")
+    }
+
+    companion object {
+        const val TAG = "Train"
+        const val downloadModelFileTag = "Download TFLite model"
     }
 }
-
-const val downloadModelFileTag = "Download TFLite model"
